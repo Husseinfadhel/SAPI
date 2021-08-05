@@ -37,8 +37,9 @@ def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, p
 # To get students info by insitute and batch
 @router.get("/studentInfo/<int:insitute_id>/<int:batch>")
 def studentInfo(insitute_id, batch):
-    students = session.query(Student).filter(
-        Student.insitute_id == insitute_id, Student.batch == batch)
-    insitute = session.query(Insitute).filter_by(id=insitute_id)
-    studentsinfo1 = [stu.format(insitute[0].format()['name']) for stu in students]
+    studentJoin = session.query(Student).join(Insitute, Student.insitute_id == Insitute.id).filter(
+        Student.insitute_id == insitute_id, Student.batch == batch).all()
+
+    studentsinfo1 = [stu.format() for stu in studentJoin]
+
     return studentsinfo1

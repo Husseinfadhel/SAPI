@@ -56,7 +56,7 @@ class Student(Operation):
             "note": self.note,
             "batch": self.batch,
             "photo": self.picture,
-            "Insitute": insit
+            "Insitute": self.Insitute.name
 
         }
 
