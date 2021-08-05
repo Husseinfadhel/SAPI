@@ -1,19 +1,17 @@
 from fastapi import APIRouter
 from Models import session, engine, Base, Insitute, Student
+from typing import Optional
 
 router = APIRouter()
 
 
 # To get Insitutes Number , Students
-@router.get("/insituteNum")
+@router.get("/insituteStudenNum")
 def insituteStudentNum():
-    num = session.query(Insitute).all()
-    num = session.query(Student).all()
-    studentnum = len(list(num))
-    # lo = [n.format() for n in num]
-    numinsitute = len(list(num))
+    num = session.query(Insitute).count()
+    num2 = session.query(Student).count()
     return {
-        "Response": "OK", "Number of Insitutes": numinsitute, "Number of Students": studentnum
+        "Response": "OK", "Number of Insitutes": num, "Number of Students": num2
     }
 
 
@@ -24,3 +22,23 @@ def insituteInsert(name: str):
     Insitute.insert(new)
 
     return {"Response": "Done"}
+
+
+# To insert Student
+@router.post("/studentInsert")
+def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, phone: Optional[int], qr: str,
+                  picture: Optional[str], note: Optional[str] = "لا يوجد"):
+    newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, qr=qr, note=note,
+                         picture=picture, batch=batch)
+    Student.insert(newstudent)
+    return {"Response": "Done"}
+
+
+# To get students info by insitute and batch
+@router.get("/studentInfo/<int:insitute_id>/<int:batch>")
+def studentInfo(insitute_id, batch):
+    students = session.query(Student).filter(
+        Student.insitute_id == insitute_id, Student.batch == batch)
+    insitute = session.query(Insitute).filter_by(id=insitute_id)
+    studentsinfo1 = [stu.format(insitute[0].format()['name']) for stu in students]
+    return studentsinfo1

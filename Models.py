@@ -36,15 +36,29 @@ class Student(Operation):
     __tablename__ = "Student"
     id = Column(Integer, primary_key=True, unique=True)
     name = Column(String)
-    dob = Column(Date)
-    phone = Column(Integer)
+    dob = Column(String, nullable=True)
+    phone = Column(Integer, nullable=True)
     qr = Column(String, unique=True)
     note = Column(String, nullable=True)
-    picture = Column(String)
+    picture = Column(String, nullable=True)
     insitute_id = Column(Integer, ForeignKey("Insitute.id"))
-    batch = Column(Integer, unique=True)
+    batch = Column(Integer)
     installment = relationship("Student_Installment", backref="Student", lazy="dynamic")
     attendance = relationship("Student_Attendance", backref="Student", lazy="dynamic")
+
+    def format(self, insit=""):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "dob": self.dob,
+            "phone": self.phone,
+            "qr": self.qr,
+            "note": self.note,
+            "batch": self.batch,
+            "photo": self.picture,
+            "Insitute": insit
+
+        }
 
 
 class Insitute(Operation):
