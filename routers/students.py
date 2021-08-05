@@ -4,14 +4,16 @@ from Models import session, engine, Base, Insitute, Student
 router = APIRouter()
 
 
-# To get Insitutes Number
+# To get Insitutes Number , Students
 @router.get("/insituteNum")
-def insituteNum():
+def insituteStudentNum():
     num = session.query(Insitute).all()
+    num = session.query(Student).all()
+    studentnum = len(list(num))
     # lo = [n.format() for n in num]
     numinsitute = len(list(num))
     return {
-        "Response": "OK", "Number of Insitutes": numinsitute
+        "Response": "OK", "Number of Insitutes": numinsitute, "Number of Students": studentnum
     }
 
 
@@ -22,14 +24,3 @@ def insituteInsert(name: str):
     Insitute.insert(new)
 
     return {"Response": "Done"}
-
-
-# To get students number
-
-@router.get("/studentNum")
-def studentNum():
-    num = session.query(Student).all()
-    studentnum = len(list(num))
-    return {
-        "Response": "OK", "Number of Students": studentnum
-    }
