@@ -6,7 +6,8 @@ engine = create_engine('sqlite:///sapi.db')
 
 Base = declarative_base()
 
-session = sessionmaker(engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+session = SessionLocal()
 
 
 class Operation(Base):
@@ -42,8 +43,8 @@ class Student(Operation):
     picture = Column(String)
     insitute_id = Column(Integer, ForeignKey("Insitute.id"))
     batch = Column(Integer, unique=True)
-    installment = relationship("Installment", backref="Student", lazy="dynamic")
-    attendance = relationship("Attendance", backref="Student", lazy="dynamic")
+    installment = relationship("Student_Installment", backref="Student", lazy="dynamic")
+    attendance = relationship("Student_Attendance", backref="Student", lazy="dynamic")
 
 
 class Insitute(Operation):
@@ -53,6 +54,13 @@ class Insitute(Operation):
     student = relationship("Student", backref="Insitute", lazy="dynamic")
     installment = relationship("Installment", backref="Insitute", lazy="dynamic")
     attendance = relationship("Attendance", backref="Insitute", lazy="dynamic")
+
+    def format(self):
+        return {
+            "id": self.id,
+            "name": self.name
+
+        }
 
 
 class Attendance(Operation):
