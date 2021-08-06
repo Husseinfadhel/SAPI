@@ -47,7 +47,7 @@ def studentInfo(insitute_id, batch):
 
 
 # to get intallement of students by student id and install id
-@router.get("/studentInstallement")
+@router.get("/studentInstallementbyid")
 def installStudent(student_id, install_id):
     installstudent = session.query(Student_Installment).join(Student, Student_Installment.student_id == Student.id).join(Installment, Student_Installment.installment_id == Installment.id)
     query = installstudent.filter(Student_Installment.student_id == student_id, Student_Installment.installment_id == install_id).all()
@@ -67,11 +67,22 @@ def installmentInsert(name: str, date: str, insitute_id: int):
 # To insert student Installment
 
 @router.post("/studentInstllinsert")
-def studentInstallinsert(student_id: int, install_id: int, received: str):
+def studentInstallinsert(student_id: int, install_id: int, received: str, insitute_id):
     received = json.loads(received.lower())
-    new = Student_Installment(student_id=student_id, installment_id=install_id, received=received)
+    new = Student_Installment(student_id=student_id, installment_id=install_id, received=received, insitute_id=insitute_id)
     Student_Installment.insert(new)
     return {
         "Response": "OK"
     }
 
+# To get students installements bulky depends on insitute
+
+@router.get("/studentInstallbyinsitute")
+def studentInstallbyinsitute(insitute_id):
+    query = session.query(Student_Installment).join(Installment, Installment.id == Student_Installment.installment_id).join(
+        Insitute, Insitute.id == Student_Installment.insitute_id
+    ).join(Student, Student.id == Student_Installment.student_id)
+    query = query.filter(Student_Installment.insitute_id == insitute_id).all()
+
+    final = [ qu.forroute() for qu in query]
+    return final

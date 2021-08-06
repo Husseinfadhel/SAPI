@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, Date,
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-engine = create_engine('sqlite:///sapi2.db')
+engine = create_engine('sqlite:///sapi3.db')
 
 Base = declarative_base()
 
@@ -68,6 +68,7 @@ class Insitute(Operation):
     student = relationship("Student", backref="Insitute", lazy="dynamic")
     installment = relationship("Installment", backref="Insitute", lazy="dynamic")
     attendance = relationship("Attendance", backref="Insitute", lazy="dynamic")
+    installment_student = relationship("Student_Installment", backref="Insitute", lazy="dynamic")
 
     def format(self):
         return {
@@ -106,12 +107,23 @@ class Student_Installment(Operation):
     id = Column(Integer, primary_key=True)
     installment_id = Column(Integer, ForeignKey("Installment.id"))
     student_id = Column(Integer, ForeignKey("Student.id"))
+    insitute_id = Column(Integer, ForeignKey("Insitute.id"))
     received = Column(Boolean)
 
     def format(self):
         return {
+            "id": self.id,
             "nameStudent": self.Student.name,
             "installNAme": self.Installment.name,
             "received": self.received,
             "Date": self.Installment.date
+        }
+
+    def forroute(self):
+        return {
+            "Student": {"id": self.Student.id, "name": self.Student.name},
+            "Installments": {"installment_id": self.Installment.id, "installment_name": self.Installment.name},
+            "insitute": self.Insitute.name,
+            "installmentAttendance_id": self.id,
+            "installment_received": self.received
         }
