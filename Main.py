@@ -7,3 +7,4 @@ Base.metadata.create_all(engine)
 app = FastAPI()
 
 app.include_router(students.router)
+app.include_router(insitute_attendance.router)

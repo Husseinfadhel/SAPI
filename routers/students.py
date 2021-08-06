@@ -1,6 +1,8 @@
 from fastapi import APIRouter
-from Models import session, engine, Base, Insitute, Student
+from Models import session, engine, Base, Insitute, Student, Student_Installment, Installment
 from typing import Optional
+from datetime import datetime
+import json
 
 router = APIRouter()
 
@@ -28,7 +30,8 @@ def insituteInsert(name: str):
 @router.post("/studentInsert")
 def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, phone: Optional[int], qr: str,
                   picture: Optional[str], note: Optional[str] = "لا يوجد"):
-    newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, qr=qr, note=note,
+    date = datetime.strptime(dob, '%Y,%m,%d')
+    newstudent = Student(name=name, dob=date, insitute_id=insitute_id, phone=phone, qr=qr, note=note,
                          picture=picture, batch=batch)
     Student.insert(newstudent)
     return {"Response": "Done"}
@@ -43,3 +46,35 @@ def studentInfo(insitute_id, batch):
     studentsinfo1 = [stu.format() for stu in studentJoin]
 
     return studentsinfo1
+
+
+# to get intallement of students by student id and install id
+@router.get("/studentInstallement")
+def installStudent(student_id, install_id):
+    installstudent = session.query(Student_Installment).join(Student).join(Installment).filter(
+        Student_Installment.student_id == student_id, Student_Installment == install_id,
+        Student_Installment.student_id == Student.id, Student_Installment.installment_id == Installment.id).all()
+    liststudentinstall = [inst.format() for inst in installstudent]
+    return liststudentinstall
+
+
+# To insert Installment
+
+@router.post("/installmentInsert")
+def installmentInsert(name: str, date: str, insitute_id: int):
+    date = datetime.strptime(date, '%Y,%m,%d')
+    new = Installment(name=name, date=date, insitute_id=insitute_id)
+    Installment.insert(new)
+    return {"Response": "Done"}
+
+
+# To insert studentInstallment
+
+@router.post("/studentInstllinsert")
+def studentInstallinsert(student_id: int, install_id: int, received: str):
+    received = json.loads(received.lower())
+    new = Student_Installment(student_id=student_id, id=install_id, received=received)
+    Student_Installment.insert(new)
+    return {
+        "Response": "OK"
+    }

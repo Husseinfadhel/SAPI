@@ -36,7 +36,7 @@ class Student(Operation):
     __tablename__ = "Student"
     id = Column(Integer, primary_key=True, unique=True)
     name = Column(String)
-    dob = Column(String, nullable=True)
+    dob = Column(Date, nullable=True)
     phone = Column(Integer, nullable=True)
     qr = Column(String, unique=True)
     note = Column(String, nullable=True)
@@ -107,3 +107,11 @@ class Student_Installment(Operation):
     installment_id = Column(Integer, ForeignKey("Installment.id"))
     student_id = Column(Integer, ForeignKey("Student.id"))
     received = Column(Boolean)
+
+    def format(self):
+        return {
+            "nameStudent": self.Student.name,
+            "installNAme": self.Installment.name,
+            "received": self.received,
+            "Date": self.Installment.date
+        }
