@@ -7,12 +7,14 @@ router = APIRouter()
 
 
 # To get Insitutes Number , Students
-@router.get("/insituteStudenNum")
-def insituteStudentNum():
-    num = session.query(Insitute).count()
-    num2 = session.query(Student).count()
+@router.get("/main-admin")
+def main_admin():
+    students = session.query(Student).count()
+    institutes = session.query(Insitute).count()
     return {
-        "Response": "OK", "Number of Insitutes": num, "Number of Students": num2
+        "Response": "OK",
+        "students_count": students,
+        "institutes_count": institutes
     }
 
 
@@ -49,8 +51,10 @@ def studentInfo(insitute_id, batch):
 # to get intallement of students by student id and install id
 @router.get("/studentInstallementbyid")
 def installStudent(student_id, install_id):
-    installstudent = session.query(Student_Installment).join(Student, Student_Installment.student_id == Student.id).join(Installment, Student_Installment.installment_id == Installment.id)
-    query = installstudent.filter(Student_Installment.student_id == student_id, Student_Installment.installment_id == install_id).all()
+    installstudent = session.query(Student_Installment).join(Student, Student_Installment.student_id == Student.id).join(
+        Installment, Student_Installment.installment_id == Installment.id)
+    query = installstudent.filter(Student_Installment.student_id ==
+                                  student_id, Student_Installment.installment_id == install_id).all()
     liststudentinstall = [inst.format() for inst in query]
     return liststudentinstall
 
@@ -69,7 +73,8 @@ def installmentInsert(name: str, date: str, insitute_id: int):
 @router.post("/studentInstllinsert")
 def studentInstallinsert(student_id: int, install_id: int, received: str, insitute_id):
     received = json.loads(received.lower())
-    new = Student_Installment(student_id=student_id, installment_id=install_id, received=received, insitute_id=insitute_id)
+    new = Student_Installment(
+        student_id=student_id, installment_id=install_id, received=received, insitute_id=insitute_id)
     Student_Installment.insert(new)
     return {
         "Response": "OK"
@@ -77,9 +82,10 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, insitu
 
 # To get students installements bulky
 
+
 @router.get("/studentInstall")
 def studentInstall():
-    #query = session.query(Student_Installment).join(Installment, Installment.id == Student_Installment.installment_id).join(
+    # query = session.query(Student_Installment).join(Installment, Installment.id == Student_Installment.installment_id).join(
     #    Insitute, Insitute.id == Student_Installment.insitute_id).join(Student, Student.id == Student_Installment.student_id)
     #query = query.filter(Student_Installment.insitute_id == insitute_id).all()
     installment = {}
@@ -93,23 +99,23 @@ def studentInstall():
     installNum = 1
     installl = {}
     for stu in query:
-         student['id'] = stu.format()['id']
-         student['name'] = stu.format()['name']
-         student["insitute_id"] = stu.format()['insitute_id']
-         student_id = stu.format()['id']
-         print()
-         for install in query2.filter_by(student_id=student_id):
-             if install.received()['received']:
-                 installl[installNum] = "true"
-             else:
-                 installl[installNum] = "false"
-             student["installment_received"] = installl
+        student['id'] = stu.format()['id']
+        student['name'] = stu.format()['name']
+        student["insitute_id"] = stu.format()['insitute_id']
+        student_id = stu.format()['id']
+        print()
+        for install in query2.filter_by(student_id=student_id):
+            if install.received()['received']:
+                installl[installNum] = "true"
+            else:
+                installl[installNum] = "false"
+            student["installment_received"] = installl
 
-             installNum+=1
-         installl = {}
-         studen_json['Students'].append(student)
-         student = {}
-         installNum = 1
+            installNum += 1
+        installl = {}
+        studen_json['Students'].append(student)
+        student = {}
+        installNum = 1
     for install in query3:
         installment['id'] = install.format()['id']
         installment['name'] = install.format()['name']
