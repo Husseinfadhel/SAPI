@@ -2,11 +2,12 @@ from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, Date,
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-engine = create_engine('sqlite:///sapi.db')
+engine = create_engine('sqlite:///sapi3.db')
 
 Base = declarative_base()
 
-session = sessionmaker(engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+session = SessionLocal()
 
 
 class Operation(Base):
@@ -35,15 +36,29 @@ class Student(Operation):
     __tablename__ = "Student"
     id = Column(Integer, primary_key=True, unique=True)
     name = Column(String)
-    dob = Column(Date)
-    phone = Column(Integer)
+    dob = Column(String, nullable=True)
+    phone = Column(Integer, nullable=True)
     qr = Column(String, unique=True)
     note = Column(String, nullable=True)
-    picture = Column(String)
+    picture = Column(String, nullable=True)
     insitute_id = Column(Integer, ForeignKey("Insitute.id"))
-    batch = Column(Integer, unique=True)
-    installment = relationship("Installment", backref="Student", lazy="dynamic")
-    attendance = relationship("Attendance", backref="Student", lazy="dynamic")
+    batch = Column(Integer)
+    installment = relationship("Student_Installment", backref="Student", lazy="dynamic")
+    attendance = relationship("Student_Attendance", backref="Student", lazy="dynamic")
+
+    def format(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "dob": self.dob,
+            "phone": self.phone,
+            "qr": self.qr,
+            "note": self.note,
+            "batch": self.batch,
+            "photo": self.picture,
+            "Insitute": self.Insitute.name
+
+        }
 
 
 class Insitute(Operation):
@@ -53,6 +68,14 @@ class Insitute(Operation):
     student = relationship("Student", backref="Insitute", lazy="dynamic")
     installment = relationship("Installment", backref="Insitute", lazy="dynamic")
     attendance = relationship("Attendance", backref="Insitute", lazy="dynamic")
+    installment_student = relationship("Student_Installment", backref="Insitute", lazy="dynamic")
+
+    def format(self):
+        return {
+            "id": self.id,
+            "name": self.name
+
+        }
 
 
 class Attendance(Operation):
@@ -74,7 +97,7 @@ class Installment(Operation):
     __tablename__ = "Installment"
     id = Column(Integer, primary_key=True, unique=True)
     name = Column(String)
-    date = Column(Date)
+    date = Column(String)
     insitute_id = Column(Integer, ForeignKey("Insitute.id"))
     student_Installment = relationship("Student_Installment", backref="Installment", lazy="dynamic")
 
@@ -84,4 +107,21 @@ class Student_Installment(Operation):
     id = Column(Integer, primary_key=True)
     installment_id = Column(Integer, ForeignKey("Installment.id"))
     student_id = Column(Integer, ForeignKey("Student.id"))
+    insitute_id = Column(Integer, ForeignKey("Insitute.id"))
     received = Column(Boolean)
+
+    def format(self):
+        return {
+            "id": self.id,
+            "nameStudent": self.Student.name,
+            "installNAme": self.Installment.name,
+            "received": self.received,
+            "Date": self.Installment.date
+        }
+
+    def forroute(self):
+        return {
+            "Student": {"id": self.Student.id, "name": self.Student.name, "insitute_id": self.Student.insitute_id, "installment_received":self.received},
+            "Installments": {"installment_id": self.Installment.id, "installment_name": self.Installment.name, "insitute_name":self.Insitute.name, "date":self.Installment.date}
+
+        }
