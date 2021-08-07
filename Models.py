@@ -121,9 +121,7 @@ class Student_Installment(Operation):
 
     def forroute(self):
         return {
-            "Student": {"id": self.Student.id, "name": self.Student.name},
-            "Installments": {"installment_id": self.Installment.id, "installment_name": self.Installment.name},
-            "insitute": self.Insitute.name,
-            "installmentAttendance_id": self.id,
-            "installment_received": self.received
+            "Student": {"id": self.Student.id, "name": self.Student.name, "insitute_id": self.Student.insitute_id, "installment_received":self.received},
+            "Installments": {"installment_id": self.Installment.id, "installment_name": self.Installment.name, "insitute_name":self.Insitute.name, "date":self.Installment.date}
+
         }
