@@ -56,6 +56,7 @@ class Student(Operation):
             "note": self.note,
             "batch": self.batch,
             "photo": self.picture,
+            "insitute_id":self.insitute_id,
             "Insitute": self.Insitute.name
 
         }
@@ -100,6 +101,15 @@ class Installment(Operation):
     date = Column(String)
     insitute_id = Column(Integer, ForeignKey("Insitute.id"))
     student_Installment = relationship("Student_Installment", backref="Installment", lazy="dynamic")
+    def format(self):
+        return {
+            "id": self.id,
+            "name":self.name,
+            "insitute_id": self.Insitute.id,
+            "insitute_name":self.Insitute.name,
+            "date":self.date
+                }
+
 
 
 class Student_Installment(Operation):
@@ -119,9 +129,15 @@ class Student_Installment(Operation):
             "Date": self.Installment.date
         }
 
-    def forroute(self):
+    def received(self):
         return {
-            "Student": {"id": self.Student.id, "name": self.Student.name, "insitute_id": self.Student.insitute_id, "installment_received":self.received},
-            "Installments": {"installment_id": self.Installment.id, "installment_name": self.Installment.name, "insitute_name":self.Insitute.name, "date":self.Installment.date}
+            "received": self.received
+
+        }
+    def student(self):
+        return {
+            "id": self.Student.id,
+            "name": self.Student.name,
+            "insitute_id":self.Student.insitute_id
 
         }
