@@ -2,6 +2,10 @@ from fastapi import APIRouter
 from Models import session, engine, Base, Insitute, Student, Student_Installment, Installment
 from typing import Optional
 import json
+import qrcode
+from PIL import ImageDraw, ImageFont
+from io import BytesIO
+import os
 
 router = APIRouter()
 
@@ -29,6 +33,7 @@ def main_admin():
         child = {}
     return result
 
+
 # To insert Insitute
 @router.post("/insitute")
 def insituteInsert(name: str):
@@ -40,11 +45,16 @@ def insituteInsert(name: str):
 
 # To insert Student
 @router.post("/studentInsert")
-def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, phone: Optional[int], qr: str,
-                  picture: Optional[str], note: Optional[str] = "لا يوجد"):
-    newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, qr=qr, note=note,
-                         picture=picture, batch=batch)
+def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, phone: Optional[int],
+                  note: Optional[str] = "لا يوجد"):
+    newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, note=note,
+                         batch=batch)
     Student.insert(newstudent)
+    query = session.query(Student).filter_by(name=name).first()
+    id_student = query.format()['id']
+    qr = qrgen(id_student, name)
+    Student(qr=qr, id=id_student)
+    Student.update()
     return {"Response": "Done"}
 
 
@@ -62,7 +72,8 @@ def studentInfo(insitute_id, batch):
 # to get intallement of students by student id and install id
 @router.get("/studentInstallementbyid")
 def installStudent(student_id, install_id):
-    installstudent = session.query(Student_Installment).join(Student, Student_Installment.student_id == Student.id).join(
+    installstudent = session.query(Student_Installment).join(Student,
+                                                             Student_Installment.student_id == Student.id).join(
         Installment, Student_Installment.installment_id == Installment.id)
     query = installstudent.filter(Student_Installment.student_id ==
                                   student_id, Student_Installment.installment_id == install_id).all()
@@ -91,6 +102,7 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, insitu
         "Response": "OK"
     }
 
+
 # To get students installements bulky
 
 
@@ -98,7 +110,7 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, insitu
 def studentInstall():
     # query = session.query(Student_Installment).join(Installment, Installment.id == Student_Installment.installment_id).join(
     #    Insitute, Insitute.id == Student_Installment.insitute_id).join(Student, Student.id == Student_Installment.student_id)
-    #query = query.filter(Student_Installment.insitute_id == insitute_id).all()
+    # query = query.filter(Student_Installment.insitute_id == insitute_id).all()
     installment = {}
     query = session.query(Student).all()
     query2 = session.query(Student_Installment)
@@ -136,3 +148,22 @@ def studentInstall():
         studen_json['Installments'].append(installment)
         installment = {}
     return studen_json
+
+
+# Function to generate qr image with student is and name embedded in it
+def qrgen(id, name):
+    id = str(id)
+    name = name.encode("utf-8")
+    img = qrcode.make(id + "|" + "besmarty")
+    print(img)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype("A_Nefel_Sereke.ttf", 20)
+    draw.text((150, 250), name.decode("utf-8"), font=font, align="right")
+    imagname = '{}'.format(name.decode("utf-8"))
+    img.show()
+    img.save('/images/' + imagname, 'PNG')
+    return {
+        "qrpath": '/images/' + imagname,
+
+
+    }
