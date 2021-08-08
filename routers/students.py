@@ -21,7 +21,6 @@ def main_admin():
     }
     child = {}
     for insitute in institutes:
-        print(insitute.format())
         child['id'] = insitute.format()['id']
         child['name'] = insitute.format()['name']
         student_count = students.filter_by(insitute_id=insitute.format()['id']).count()
