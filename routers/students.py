@@ -9,14 +9,26 @@ router = APIRouter()
 # To get Insitutes Number , Students
 @router.get("/main-admin")
 def main_admin():
-    students = session.query(Student).count()
-    institutes = session.query(Insitute).count()
-    return {
-        "Response": "OK",
-        "students_count": students,
-        "institutes_count": institutes
-    }
+    students = session.query(Student)
+    institutes = session.query(Insitute)
 
+    result = {
+        "Response": "OK",
+        "students_count": students.count(),
+        "institutes_count": institutes.count(),
+        "insitutes": []
+
+    }
+    child = {}
+    for insitute in institutes:
+        print(insitute.format())
+        child['id'] = insitute.format()['id']
+        child['name'] = insitute.format()['name']
+        student_count = students.filter_by(insitute_id=insitute.format()['id']).count()
+        child['Students_institute_count'] = student_count
+        result['insitutes'].append(child)
+        child = {}
+    return result
 
 # To insert Insitute
 @router.post("/insitute")
