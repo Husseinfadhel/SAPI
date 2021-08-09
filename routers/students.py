@@ -4,8 +4,9 @@ from typing import Optional
 import json
 import qrcode
 from PIL import ImageDraw, ImageFont
-from io import BytesIO
-import os
+import arabic_reshaper
+from bidi.algorithm import get_display
+import pathlib
 
 router = APIRouter()
 
@@ -50,11 +51,10 @@ def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, p
     newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, note=note,
                          batch=batch)
     Student.insert(newstudent)
-    query = session.query(Student).filter_by(name=name).first()
-    id_student = query.format()['id']
-    qr = qrgen(id_student, name)
-    Student(qr=qr, id=id_student)
-    Student.update()
+    query = session.query(Student).get(newstudent.id)
+    qr = qrgen(query.id, name)
+    query.qr = qr['qrpath']
+    Student.update(query)
     return {"Response": "Done"}
 
 
@@ -153,17 +153,20 @@ def studentInstall():
 # Function to generate qr image with student is and name embedded in it
 def qrgen(id, name):
     id = str(id)
-    name = name.encode("utf-8")
+    arabic = name
+    name = arabic_reshaper.reshape(arabic)
+    name = get_display(name, upper_is_rtl=True)
     img = qrcode.make(id + "|" + "besmarty")
-    print(img)
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("A_Nefel_Sereke.ttf", 20)
-    draw.text((150, 250), name.decode("utf-8"), font=font, align="right")
-    imagname = '{}'.format(name.decode("utf-8"))
-    img.show()
-    img.save('/images/' + imagname, 'PNG')
+    font = ImageFont.truetype('arial.ttf', 20)
+    draw.text((150, 250), name, font=font, align="right")
+    path = pathlib.Path('.')
+    full_path = path.absolute()
+    my_path = full_path.as_posix()
+    imagname = '{}.png'.format(arabic)
+    my_path = my_path + '/qr/' + imagname
+    img.save(my_path, 'PNG')
     return {
-        "qrpath": '/images/' + imagname,
-
+        "qrpath": my_path
 
     }

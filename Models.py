@@ -22,7 +22,7 @@ class Operation(Base):
         session.commit(self)
 
     def update(self):
-        session.commit(self)
+        session.commit()
 
 
 class Users(Operation):
