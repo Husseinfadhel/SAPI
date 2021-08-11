@@ -2,6 +2,11 @@ from fastapi import APIRouter
 from Models import session, engine, Base, Insitute, Student, Student_Installment, Installment
 from typing import Optional
 import json
+import qrcode
+from PIL import ImageDraw, ImageFont
+import arabic_reshaper
+from bidi.algorithm import get_display
+import pathlib
 
 router = APIRouter()
 
@@ -9,13 +14,25 @@ router = APIRouter()
 # To get Insitutes Number , Students
 @router.get("/main-admin")
 def main_admin():
-    students = session.query(Student).count()
-    institutes = session.query(Insitute).count()
-    return {
+    students = session.query(Student)
+    institutes = session.query(Insitute)
+
+    result = {
         "Response": "OK",
-        "students_count": students,
-        "institutes_count": institutes
+        "students_count": students.count(),
+        "institutes_count": institutes.count(),
+        "insitutes": []
+
     }
+    child = {}
+    for insitute in institutes:
+        child['id'] = insitute.format()['id']
+        child['name'] = insitute.format()['name']
+        student_count = students.filter_by(insitute_id=insitute.format()['id']).count()
+        child['Students_institute_count'] = student_count
+        result['insitutes'].append(child)
+        child = {}
+    return result
 
 
 # To insert Insitute
@@ -29,11 +46,15 @@ def insituteInsert(name: str):
 
 # To insert Student
 @router.post("/studentInsert")
-def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, phone: Optional[int], qr: str,
-                  picture: Optional[str], note: Optional[str] = "لا يوجد"):
-    newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, qr=qr, note=note,
-                         picture=picture, batch=batch)
+def studentInsert(name: str, batch: int, dob: Optional[str], insitute_id: int, phone: Optional[int],
+                  note: Optional[str] = "لا يوجد"):
+    newstudent = Student(name=name, dob=dob, insitute_id=insitute_id, phone=phone, note=note,
+                         batch=batch)
     Student.insert(newstudent)
+    query = session.query(Student).get(newstudent.id)
+    qr = qrgen(query.id, name)
+    query.qr = qr['qrpath']
+    Student.update(query)
     return {"Response": "Done"}
 
 
@@ -51,7 +72,8 @@ def studentInfo(insitute_id, batch):
 # to get intallement of students by student id and install id
 @router.get("/studentInstallementbyid")
 def installStudent(student_id, install_id):
-    installstudent = session.query(Student_Installment).join(Student, Student_Installment.student_id == Student.id).join(
+    installstudent = session.query(Student_Installment).join(Student,
+                                                             Student_Installment.student_id == Student.id).join(
         Installment, Student_Installment.installment_id == Installment.id)
     query = installstudent.filter(Student_Installment.student_id ==
                                   student_id, Student_Installment.installment_id == install_id).all()
@@ -80,6 +102,7 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, insitu
         "Response": "OK"
     }
 
+
 # To get students installements bulky
 
 
@@ -87,7 +110,7 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, insitu
 def studentInstall():
     # query = session.query(Student_Installment).join(Installment, Installment.id == Student_Installment.installment_id).join(
     #    Insitute, Insitute.id == Student_Installment.insitute_id).join(Student, Student.id == Student_Installment.student_id)
-    #query = query.filter(Student_Installment.insitute_id == insitute_id).all()
+    # query = query.filter(Student_Installment.insitute_id == insitute_id).all()
     installment = {}
     query = session.query(Student).all()
     query2 = session.query(Student_Installment)
@@ -125,3 +148,25 @@ def studentInstall():
         studen_json['Installments'].append(installment)
         installment = {}
     return studen_json
+
+
+# Function to generate qr image with student is and name embedded in it
+def qrgen(id, name):
+    id = str(id)
+    arabic = name
+    name = arabic_reshaper.reshape(arabic)
+    name = get_display(name, upper_is_rtl=True)
+    img = qrcode.make(id + "|" + "besmarty")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype('arial.ttf', 20)
+    draw.text((150, 250), name, font=font, align="right")
+    path = pathlib.Path('.')
+    full_path = path.absolute()
+    my_path = full_path.as_posix()
+    imagname = '{}.png'.format(arabic)
+    my_path = my_path + '/qr/' + imagname
+    img.save(my_path, 'PNG')
+    return {
+        "qrpath": my_path
+
+    }

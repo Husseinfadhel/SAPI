@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, Date,
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-engine = create_engine('sqlite:///sapi3.db')
+engine = create_engine('sqlite:///sapi.db')
 
 Base = declarative_base()
 
@@ -22,7 +22,7 @@ class Operation(Base):
         session.commit(self)
 
     def update(self):
-        session.commit(self)
+        session.commit()
 
 
 class Users(Operation):
@@ -38,7 +38,7 @@ class Student(Operation):
     name = Column(String)
     dob = Column(String, nullable=True)
     phone = Column(Integer, nullable=True)
-    qr = Column(String, unique=True)
+    qr = Column(String, unique=True, nullable=True)
     note = Column(String, nullable=True)
     picture = Column(String, nullable=True)
     insitute_id = Column(Integer, ForeignKey("Insitute.id"))
