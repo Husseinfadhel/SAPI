@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from Models import session, engine, Base, Insitute, Student
+from models import session, engine, Base, Institute, Student
 from typing import Optional
 
 
