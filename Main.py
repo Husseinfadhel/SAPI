@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Models import session, engine, Base
+from models import session, engine, Base
 from routers import students, insitute_attendance
 
 Base.metadata.create_all(engine)
