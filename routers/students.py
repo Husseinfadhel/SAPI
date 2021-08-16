@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models import session, engine, Base, Institute, Student, Student_Installment, Installment
+from models import session, engine, Base, Institute, Student, Student_Installment, Installment, Batch
 from typing import Optional
 import json
 import qrcode
@@ -41,18 +41,26 @@ def instituteInsert(name: str):
     return {"Response": "Done"}
 
 
+# To insert Batch
+@router.post("/batch")
+def post_batch(batch_num):
+    new = Batch(batch_num=batch_num)
+    Batch.insert(new)
+    return {"success": True}
+
+
 # To insert Student
-@router.post("/studentInsert")
-def studentInsert(name: str, batch: int, dob: Optional[str], institute_id: int, phone: Optional[int],
-                  note: Optional[str] = "لا يوجد"):
+@router.post("/student")
+def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int, phone: Optional[int],
+                 note: Optional[str] = "لا يوجد"):
     newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone, note=note,
-                         batch=batch)
+                         batch_id=batch_id)
     Student.insert(newstudent)
     query = session.query(Student).get(newstudent.id)
     qr = qrgen(query.id, name)
     query.qr = qr['qrpath']
     Student.update(query)
-    return {"Response": "Done"}
+    return {"success": True}
 
 
 # To get students info by institute and batch
@@ -110,6 +118,8 @@ def studentInstall():
     # query = query.filter(Student_Installment.institute_id == institute_id).all()
     installment = {}
     query = session.query(Student).all()
+    for ta in query:
+        print(ta.id)
     query2 = session.query(Student_Installment)
     query3 = session.query(Installment).all()
     studen_json = {

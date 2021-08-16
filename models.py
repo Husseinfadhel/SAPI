@@ -42,7 +42,7 @@ class Student(Operation):
     note = Column(String, nullable=True)
     picture = Column(String, nullable=True)
     institute_id = Column(Integer, ForeignKey("Institute.id"))
-    batch = Column(Integer)
+    batch_id = Column(Integer, ForeignKey('Batch.id'))
     installment = relationship(
         "Student_Installment", backref="Student", lazy="dynamic")
     attendance = relationship("Student_Attendance",
@@ -88,6 +88,8 @@ class Attendance(Operation):
     id = Column(Integer, primary_key=True)
     Institute_id = Column(Integer, ForeignKey("Institute.id"))
     date = Column(Date)
+    batch_id = Column(Integer, ForeignKey('Batch.id'))
+
     student_attendance = relationship(
         "Student_Attendance", backref="Attendance", lazy="dynamic")
 
@@ -105,6 +107,7 @@ class Installment(Operation):
     name = Column(String)
     date = Column(String)
     Institute_id = Column(Integer, ForeignKey("Institute.id"))
+    batch_id = Column(Integer, ForeignKey('Batch.id'))
     student_Installment = relationship(
         "Student_Installment", backref="Installment", lazy="dynamic")
 
@@ -117,6 +120,20 @@ class Installment(Operation):
             "date": self.date
         }
 
+
+class Batch(Operation):
+    __tablename__ = "Batch"
+    id = Column(Integer, primary_key=True)
+    batch_num = Column(Integer, unique=True)
+    student = relationship('Student', backref='Batch', lazy='dynamic')
+    attendance = relationship('Attendance', backref='Batch', lazy='dynamic')
+    installment = relationship('Installment', backref='Batch')
+
+    def format(self):
+        return {
+            "id":self.id,
+            "batch_num": self.batch_num
+        }
 
 class Student_Installment(Operation):
     __tablename__ = "Student_Installment"
