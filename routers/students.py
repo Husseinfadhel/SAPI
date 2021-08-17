@@ -41,12 +41,27 @@ def instituteInsert(name: str):
     return {"Response": "Done"}
 
 
+# To get Institutes
+@router.get('/institute')
+def get_institute():
+    query = session.query(Institute).all()
+    return {'success': True,
+            "institutes": [inst.format() for inst in query]}
+
+
 # To insert Batch
 @router.post("/batch")
 def post_batch(batch_num):
     new = Batch(batch_num=batch_num)
     Batch.insert(new)
     return {"success": True}
+
+
+# To get batch
+@router.get('/batch')
+def get_batch():
+    query = session.query(Batch).all()
+    return {"success": True, 'batchs': [batch.format() for batch in query]}
 
 
 # To insert Student
@@ -64,10 +79,10 @@ def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int
 
 
 # To get students info by institute and batch
-@router.get("/studentInfo/<int:institute_id>/<int:batch>")
-def studentInfo(institute_id, batch):
+@router.get("/studentInfo")
+def studentInfo(institute_id, batch_id):
     studentJoin = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-        Student.institute_id == institute_id, Student.batch == batch).all()
+        Student.institute_id == institute_id, Student.batch_id == batch_id).all()
 
     studentsinfo1 = [stu.format() for stu in studentJoin]
 
