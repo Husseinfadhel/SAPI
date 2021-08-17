@@ -174,6 +174,26 @@ def studentInstall():
     return studen_json
 
 
+# To get student installments by id student
+@router.get('/studentinstallbyId')
+def get_student_installment(student_id):
+    query = session.query(Student_Installment).filter_by(student_id=student_id)
+    install = {}
+    student = {}
+    installNum = 1
+    for stu in query:
+        if stu.format()['received']:
+            install[installNum] = "true"
+        else:
+            install[installNum] = "false"
+        student["installment_received"] = install
+        installNum += 1
+    return {
+        "success": True,
+        "install": student
+    }
+
+
 # Function to generate qr image with student is and name embedded in it
 def qrgen(id, name):
     id = str(id)
