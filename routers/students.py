@@ -103,11 +103,11 @@ def installStudent(student_id, install_id):
 
 # To insert Installment
 
-@router.post("/installmentInsert")
-def installmentInsert(name: str, date: str, institute_id: int):
-    new = Installment(name=name, date=date, institute_id=institute_id)
+@router.post("/installment")
+def post_installment(name: str, date: str, institute_id: int, batch_id):
+    new = Installment(name=name, date=date, institute_id=institute_id, batch_id=batch_id)
     Installment.insert(new)
-    return {"Response": "Done"}
+    return {"success": True}
 
 
 # To insert student Installment
@@ -119,7 +119,7 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, instit
         student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
     Student_Installment.insert(new)
     return {
-        "Response": "OK"
+        "success": True
     }
 
 
@@ -133,8 +133,6 @@ def studentInstall():
     # query = query.filter(Student_Installment.institute_id == institute_id).all()
     installment = {}
     query = session.query(Student).all()
-    for ta in query:
-        print(ta.id)
     query2 = session.query(Student_Installment)
     query3 = session.query(Installment).all()
     studen_json = {
@@ -147,6 +145,8 @@ def studentInstall():
         student['id'] = stu.format()['id']
         student['name'] = stu.format()['name']
         student["institute_id"] = stu.format()['institute_id']
+        student["batch_id"] = stu.format()['batch_id']
+
         student_id = stu.format()['id']
         print()
         for install in query2.filter_by(student_id=student_id):
@@ -167,6 +167,8 @@ def studentInstall():
         installment['institute_id'] = install.format()['institute_id']
         installment['institute_name'] = install.format()['institute_name']
         installment['date'] = install.format()['date']
+        installment['batch_id'] = install.format()['batch_id']
+
         studen_json['Installments'].append(installment)
         installment = {}
     return studen_json

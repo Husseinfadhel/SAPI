@@ -56,7 +56,7 @@ class Student(Operation):
             "phone": self.phone,
             "qr": self.qr,
             "note": self.note,
-            "batch": self.batch_id,
+            "batch_id": self.batch_id,
             "photo": self.picture,
             "institute_id": self.institute_id,
             "institute": self.Institute.name
@@ -86,9 +86,9 @@ class Institute(Operation):
 class Attendance(Operation):
     __tablename__ = "Attendance"
     id = Column(Integer, primary_key=True)
-    Institute_id = Column(Integer, ForeignKey("Institute.id"))
-    date = Column(Date)
+    date = Column(String)
     batch_id = Column(Integer, ForeignKey('Batch.id'))
+    institute_id = Column(Integer, ForeignKey("Institute.id"))
 
     student_attendance = relationship(
         "Student_Attendance", backref="Attendance", lazy="dynamic")
@@ -106,7 +106,7 @@ class Installment(Operation):
     id = Column(Integer, primary_key=True, unique=True)
     name = Column(String)
     date = Column(String)
-    Institute_id = Column(Integer, ForeignKey("Institute.id"))
+    institute_id = Column(Integer, ForeignKey("Institute.id"))
     batch_id = Column(Integer, ForeignKey('Batch.id'))
     student_Installment = relationship(
         "Student_Installment", backref="Installment", lazy="dynamic")
@@ -115,9 +115,10 @@ class Installment(Operation):
         return {
             "id": self.id,
             "name": self.name,
-            "Institute_id": self.Institute.id,
-            "Institute_name": self.Institute.name,
-            "date": self.date
+            "institute_id": self.Institute.id,
+            "institute_name": self.Institute.name,
+            "date": self.date,
+            "batch_id": self.batch_id
         }
 
 
@@ -131,17 +132,18 @@ class Batch(Operation):
 
     def format(self):
         return {
-            "id":self.id,
+            "id": self.id,
             "batch_num": self.batch_num
         }
+
 
 class Student_Installment(Operation):
     __tablename__ = "Student_Installment"
     id = Column(Integer, primary_key=True)
     installment_id = Column(Integer, ForeignKey("Installment.id"))
     student_id = Column(Integer, ForeignKey("Student.id"))
-    Institute_id = Column(Integer, ForeignKey("Institute.id"))
-    received = Column(Boolean)
+    institute_id = Column(Integer, ForeignKey("Institute.id"))
+    received = Column(Boolean, default=False)
 
     def format(self):
         return {
