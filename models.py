@@ -56,7 +56,7 @@ class Student(Operation):
             "phone": self.phone,
             "qr": self.qr,
             "note": self.note,
-            "batch": self.batch,
+            "batch": self.batch_id,
             "photo": self.picture,
             "institute_id": self.institute_id,
             "institute": self.Institute.name
