@@ -113,10 +113,9 @@ def post_installment(name: str, date: str, institute_id: int, batch_id):
 # To insert student Installment
 
 @router.post("/studentInstllinsert")
-def studentInstallinsert(student_id: int, install_id: int, received: str, institute_id):
-    received = json.loads(received.lower())
+def studentInstallinsert(student_id: int, install_id: int, received: int, institute_id):
     new = Student_Installment(
-        student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
+        student_id=student_id, installment_id=install_id, receive=received, institute_id=institute_id)
     Student_Installment.insert(new)
     return {
         "success": True
@@ -128,50 +127,25 @@ def studentInstallinsert(student_id: int, install_id: int, received: str, instit
 
 @router.get("/studentInstall")
 def studentInstall():
-    # query = session.query(Student_Installment).join(Installment, Installment.id == Student_Installment.installment_id).join(
-    #    Institute, Institute.id == Student_Installment.institute_id).join(Student, Student.id == Student_Installment.student_id)
-    # query = query.filter(Student_Installment.institute_id == institute_id).all()
-    installment = {}
-    query = session.query(Student).all()
-    query2 = session.query(Student_Installment)
-    query3 = session.query(Installment).all()
-    studen_json = {
-        "Students": [], "Installments": []
-    }
-    student = {}
-    installNum = 1
-    installl = {}
-    for stu in query:
-        student['id'] = stu.format()['id']
-        student['name'] = stu.format()['name']
-        student["institute_id"] = stu.format()['institute_id']
-        student["batch_id"] = stu.format()['batch_id']
+    query = session.query(Student).join(Installment,
+                                        Installment.id == Student_Installment.installment_id).join(
+        Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
+                                                                          Student.id == Student_Installment.student_id).join(
+        Batch, Batch.id == Student.batch_id).all()
+    query2 = session.query(Installment).join(Batch, Batch.id == Installment.batch_id).join(Institute, Institute.id ==
+                                                                                           Installment.institute_id)
+    result = {'students': [record.students() for record in query],
+              "installments": [record.installment() for record in query2.all()]}
 
-        student_id = stu.format()['id']
-        print()
-        for install in query2.filter_by(student_id=student_id):
-            if install.received()['received']:
-                installl[installNum] = "true"
-            else:
-                installl[installNum] = "false"
-            student["installment_received"] = installl
+    num = 1
+    for stu in result["students"]:
+        query = session.query(Student_Installment).filter_by(student_id=stu['id']).all()
+        stu["installment_received"] = {}
+        for record in [record1.received() for record1 in query]:
+            stu['installment_received'].update({num: record['received']})
 
-            installNum += 1
-        installl = {}
-        studen_json['Students'].append(student)
-        student = {}
-        installNum = 1
-    for install in query3:
-        installment['id'] = install.format()['id']
-        installment['name'] = install.format()['name']
-        installment['institute_id'] = install.format()['institute_id']
-        installment['institute_name'] = install.format()['institute_name']
-        installment['date'] = install.format()['date']
-        installment['batch_id'] = install.format()['batch_id']
-
-        studen_json['Installments'].append(installment)
-        installment = {}
-    return studen_json
+            num += 1
+    return result
 
 
 # To get student installments by id student
