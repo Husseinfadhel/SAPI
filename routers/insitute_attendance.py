@@ -16,9 +16,9 @@ def post_attendance(date, batch_id, institute_id):
 
 
 # insert students attendance
-@router.post('/studentsattendance')
-def post_student_attendance(attendance_id, student_id):
-    new = Student_Attendance(attendance_id=attendance_id, student_id=student_id)
+@router.post('/students_attendance')
+def post_student_attendance(attendance_id, student_id, attend: int):
+    new = Student_Attendance(attendance_id=attendance_id, student_id=student_id, attended=attend)
     Student_Attendance.insert(new)
     return {
         "success": True

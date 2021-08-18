@@ -125,8 +125,8 @@ def studentInstallinsert(student_id: int, install_id: int, received: int, instit
 # To get students installements bulky
 
 
-@router.get("/studentInstall")
-def studentInstall():
+@router.get("/student_install")
+def student_install():
     query = session.query(Student).join(Installment,
                                         Installment.id == Student_Installment.installment_id).join(
         Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
@@ -137,34 +137,32 @@ def studentInstall():
     result = {'students': [record.students() for record in query],
               "installments": [record.installment() for record in query2.all()]}
 
-    num = 1
     for stu in result["students"]:
         query = session.query(Student_Installment).filter_by(student_id=stu['id']).all()
-        stu["installment_received"] = {}
+        dicto = {}
+        newlist = []
+        stu['installment_received'] = {}
         for record in [record1.received() for record1 in query]:
-            stu['installment_received'].update({num: record['received']})
+            dicto.update({"id": record['id'],
+                          "received": record['received'],
+                          "installment_id": record['installment_id']})
+            newlist.append(dicto)
+            dicto = {}
 
-            num += 1
+        stu['installment_received'] = newlist
+
     return result
 
 
 # To get student installments by id student
-@router.get('/studentinstallbyId')
+@router.get('/student_install_by_id')
 def get_student_installment(student_id):
-    query = session.query(Student_Installment).filter_by(student_id=student_id)
-    install = {}
-    student = {}
-    installNum = 1
-    for stu in query:
-        if stu.format()['received']:
-            install[installNum] = "true"
-        else:
-            install[installNum] = "false"
-        student["installment_received"] = install
-        installNum += 1
+    query = session.query(Student_Installment).filter_by(student_id=student_id).all()
+
+    result = [stu.format() for stu in query]
     return {
         "success": True,
-        "install": student
+        "student_installment": result
     }
 
 

@@ -176,8 +176,9 @@ class Student_Installment(Operation):
 
     def received(self):
         return {
-            "received": self.receive
-
+            "received": self.receive,
+            'id': self.id,
+            "installment_id": self.Installment.id
         }
 
     def student(self):
