@@ -62,6 +62,15 @@ class Student(Operation):
             "institute": self.Institute.name
         }
 
+    def students(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "institute_id": self.Institute.id,
+            "batch_id": self.Batch.id,
+
+        }
+
 
 class Institute(Operation):
     __tablename__ = "Institute"
@@ -99,6 +108,7 @@ class Student_Attendance(Operation):
     id = Column(Integer, primary_key=True)
     student_id = Column(Integer, ForeignKey("Student.id"))
     attendance_id = Column(Integer, ForeignKey("Attendance.id"))
+    attended = Column(Integer, default=0)
 
 
 class Installment(Operation):
@@ -119,6 +129,16 @@ class Installment(Operation):
             "institute_name": self.Institute.name,
             "date": self.date,
             "batch_id": self.batch_id
+        }
+
+    def installment(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "institute_id": self.Institute.id,
+            "institute_name": self.Institute.name,
+            "date": self.date,
+            "batch_id": self.Batch.id
         }
 
 
@@ -143,20 +163,20 @@ class Student_Installment(Operation):
     installment_id = Column(Integer, ForeignKey("Installment.id"))
     student_id = Column(Integer, ForeignKey("Student.id"))
     institute_id = Column(Integer, ForeignKey("Institute.id"))
-    received = Column(Boolean, default=False)
+    receive = Column(Integer, default=0)
 
     def format(self):
         return {
             "id": self.id,
             "nameStudent": self.Student.name,
             "installNAme": self.Installment.name,
-            "received": self.received,
+            "received": self.receive,
             "Date": self.Installment.date
         }
 
     def received(self):
         return {
-            "received": self.received
+            "received": self.receive
 
         }
 
