@@ -1,7 +1,6 @@
 from fastapi import APIRouter
-from models import session, engine, Base, Institute, Student, Student_Installment, Installment, Batch
+from models import session, Institute, Student, Student_Installment, Installment, Batch
 from typing import Optional
-import json
 import qrcode
 from PIL import ImageDraw, ImageFont
 import arabic_reshaper
@@ -72,21 +71,32 @@ def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int
                          batch_id=batch_id)
     Student.insert(newstudent)
     query = session.query(Student).get(newstudent.id)
-    qr = qrgen(query.id, name)
+    qr = qr_gen(query.id, name)
     query.qr = qr['qrpath']
     Student.update(query)
     return {"success": True}
 
 
 # To get students info by institute and batch
-@router.get("/studentInfo")
-def studentInfo(institute_id, batch_id):
-    studentJoin = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+@router.get("/student_info")
+def student_info(institute_id, batch_id):
+    student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
         Student.institute_id == institute_id, Student.batch_id == batch_id).all()
 
-    studentsinfo1 = [stu.format() for stu in studentJoin]
+    students = [stu.format() for stu in student_join]
 
-    return studentsinfo1
+    return students
+
+
+# To get students by institute
+@router.get("/students_institute")
+def student_institute(institute_id):
+    student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+        Student.institute_id == institute_id).all()
+
+    students = [stu.format() for stu in student_join]
+
+    return students
 
 
 # to get intallement of students by student id and install id
@@ -157,22 +167,53 @@ def student_install():
 # To get student installments by id student
 @router.get('/student_install_by_id')
 def get_student_installment(student_id):
-    query = session.query(Student_Installment).filter_by(student_id=student_id).all()
+    query2 = session.query(Student).filter_by(id=student_id)
+    result = {'students': [record.students() for record in query2]}
+    for stu in result["students"]:
+        query = session.query(Student_Installment).filter_by(student_id=stu['id']).all()
+        dicto = {}
+        newlist = []
+        stu['installment_received'] = {}
+        for record in [record1.received() for record1 in query]:
+            dicto.update({"id": record['id'],
+                          "received": record['received'],
+                          "installment_id": record['installment_id']})
+            newlist.append(dicto)
+            dicto = {}
 
-    result = [stu.format() for stu in query]
-    return {
-        "success": True,
-        "student_installment": result
-    }
+        stu['installment_received'] = newlist
+    return result
 
 
-# Function to generate qr image with student is and name embedded in it
-def qrgen(id, name):
-    id = str(id)
+# get students installments by institute id
+@router.get("/student_install_by_institute_id")
+def student_installments_by_institute_id(institute_id):
+    query2 = session.query(Student).filter_by(institute_id=institute_id)
+    result = {'students': [record.students() for record in query2]}
+    for stu in result["students"]:
+        query = session.query(Student_Installment).filter_by(student_id=stu['id']).all()
+        dicto = {}
+        newlist = []
+        stu['installment_received'] = {}
+        for record in [record1.received() for record1 in query]:
+            dicto.update({"id": record['id'],
+                          "received": record['received'],
+                          "installment_id": record['installment_id']})
+            newlist.append(dicto)
+            dicto = {}
+        stu['installment_received'] = newlist
+    return result
+
+
+# to get installments by institute id and batch id
+@router.get('/')
+# Function to generate qr image with student id and name embedded in it
+def qr_gen(id_num, name):
+    id_num = str(id_num)
     arabic = name
     name = arabic_reshaper.reshape(arabic)
     name = get_display(name, upper_is_rtl=True)
-    img = qrcode.make(id + "|" + "besmarty")
+    img = qrcode.make(id_num + "|" + "besmarty")
     draw = ImageDraw.Draw(img)
     font = ImageFont.truetype('arial.ttf', 20)
     draw.text((150, 250), name, font=font, align="right")
