@@ -23,3 +23,14 @@ def post_student_attendance(attendance_id, student_id, attend: int):
     return {
         "success": True
     }
+
+
+# need fixing
+# get student attendance by institute id
+@router.get('/students_attendance_by_institute_id')
+def students_attendance_institute(institute_id: int):
+    query = session.query(Student_Attendance).join(Student).all()
+    print(query)
+    datalist = [record.format() for record in query]
+    print(datalist)
+    return datalist

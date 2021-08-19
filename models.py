@@ -110,6 +110,15 @@ class Student_Attendance(Operation):
     attendance_id = Column(Integer, ForeignKey("Attendance.id"))
     attended = Column(Integer, default=0)
 
+    def format(self):
+        return {
+            "id": self.id,
+            "student_id": self.Student.id,
+            "attendance_id": self.attendance_id,
+            "student_name": self.Student.name,
+            "attended": self.attended
+        }
+
 
 class Installment(Operation):
     __tablename__ = "Installment"
@@ -185,6 +194,8 @@ class Student_Installment(Operation):
         return {
             "id": self.Student.id,
             "name": self.Student.name,
-            "Institute_id": self.Student.Institute_id
+            "Institute_id": self.Student.institute_id,
+            "install_name": self.Installment.name,
+            "received": self.receive
 
         }
