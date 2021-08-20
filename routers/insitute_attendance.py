@@ -10,6 +10,10 @@ router = APIRouter()
 def post_attendance(date, batch_id, institute_id):
     new = Attendance(date=date, batch_id=batch_id, institute_id=institute_id)
     Attendance.insert(new)
+    query = session.query(Student).filter_by(batch_id=batch_id, institute_id=institute_id).all()
+    for stu in [qu.students() for qu in query]:
+        new_attend = Student_Attendance(student_id=stu['id'], attendance_id=new.id)
+        Student_Attendance.insert(new_attend)
     return {
         "success": True
     }
