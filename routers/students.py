@@ -176,7 +176,7 @@ def student_install():
 
 
 # To get student installments by id student
-@router.get('/student_install_by_id')
+@router.get('/student-install-bid')
 def get_student_installment(student_id):
     query2 = session.query(Student).filter_by(id=student_id)
     result = {'students': [record.students() for record in query2]}
@@ -197,7 +197,7 @@ def get_student_installment(student_id):
 
 
 # get students installments by institute id
-@router.get("/student_install_by_institute_id")
+@router.get("/student-install-institute-bid")
 def student_installments_by_institute_id(institute_id):
     query2 = session.query(Student).filter_by(institute_id=institute_id)
     result = {'students': [record.students() for record in query2]}

@@ -31,7 +31,7 @@ def post_student_attendance(attendance_id, student_id, attend: int):
 
 # need fixing
 # get student attendance by institute id
-@router.get('/students_attendance_by_institute_id')
+@router.get('/students-attendance-institute-bid')
 def students_attendance_institute(institute_id: int):
     query = session.query(Student_Attendance).join(Student).all()
     print(query)
