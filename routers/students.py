@@ -78,7 +78,7 @@ def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int
 
 
 # To get students info by institute and batch
-@router.get("/student_info")
+@router.get("/student-info")
 def student_info(institute_id, batch_id):
     student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
         Student.institute_id == institute_id, Student.batch_id == batch_id).all()
@@ -89,7 +89,7 @@ def student_info(institute_id, batch_id):
 
 
 # To get students by institute
-@router.get("/students_institute")
+@router.get("/students-institute")
 def student_institute(institute_id):
     student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
         Student.institute_id == institute_id).all()
@@ -99,9 +99,9 @@ def student_institute(institute_id):
     return students
 
 
-# to get intallement of students by student id and install id
-@router.get("/studentInstallementbyid")
-def installStudent(student_id, install_id):
+# to get installment of students by student id and install id
+@router.get("/student-installment-bid")
+def install_student(student_id, install_id):
     installstudent = session.query(Student_Installment).join(Student,
                                                              Student_Installment.student_id == Student.id).join(
         Installment, Student_Installment.installment_id == Installment.id)
@@ -117,25 +117,31 @@ def installStudent(student_id, install_id):
 def post_installment(name: str, date: str, institute_id: int, batch_id):
     new = Installment(name=name, date=date, institute_id=institute_id, batch_id=batch_id)
     Installment.insert(new)
+    query = session.query(Student).filter_by(batch_id=batch_id, institute_id=institute_id).all()
+    students = [record.students() for record in query]
+    for stu in students:
+        student_instal = Student_Installment(installment_id=new.id, student_id=stu['id'],
+                                             institute_id=stu['institute_id'])
+        Student_Installment.insert(student_instal)
     return {"success": True}
 
 
 # To insert student Installment
 
-@router.post("/studentInstllinsert")
-def studentInstallinsert(student_id: int, install_id: int, received: int, institute_id):
+@router.post("/student-installment")
+def student_installment(student_id: int, install_id: int, received: int, institute_id):
     new = Student_Installment(
-        student_id=student_id, installment_id=install_id, receive=received, institute_id=institute_id)
+        student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
     Student_Installment.insert(new)
     return {
         "success": True
     }
 
 
-# To get students installements bulky
+# To get students installments bulky
 
 
-@router.get("/student_install")
+@router.get("/student-install")
 def student_install():
     query = session.query(Student).join(Installment,
                                         Installment.id == Student_Installment.installment_id).join(
@@ -206,7 +212,7 @@ def student_installments_by_institute_id(institute_id):
 
 
 # to get installments by institute id and batch id
-@router.get('/')
+
 # Function to generate qr image with student id and name embedded in it
 def qr_gen(id_num, name):
     id_num = str(id_num)
