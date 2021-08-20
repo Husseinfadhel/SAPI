@@ -74,6 +74,11 @@ def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int
     qr = qr_gen(query.id, name)
     query.qr = qr['qrpath']
     Student.update(query)
+    installment = session.query(Installment).filter_by(institute_id=institute_id, batch_id=batch_id).all()
+    for _ in installment:
+        new_install = Student_Installment(student_id=query.id, institute_id=institute_id,
+                                          installment_id=_.format()['id'])
+        Student_Installment.insert(new_install)
     return {"success": True}
 
 
