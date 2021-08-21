@@ -33,7 +33,7 @@ def patch_attendance(_id: int, date: str, batch_id: int, institute_id: int):
 
 
 # insert students attendance
-@router.post('/students_attendance')
+@router.post('/students-attendance')
 def post_student_attendance(attendance_id, student_id, attend: int):
     new = Student_Attendance(attendance_id=attendance_id, student_id=student_id, attended=attend)
     Student_Attendance.insert(new)
@@ -60,3 +60,16 @@ def students_attendance_institute(institute_id: int):
         enlist = []
 
     return students
+
+
+# To change Student Attendance
+@router.patch('/students_attendance')
+def students_attendance(_id: int, student_id: int, attend_id: int, attended: int):
+    new = session.query(Student_Attendance).get(_id)
+    new.student_id = student_id
+    new.attendance_id = attend_id
+    new.attended = attended
+    Student_Attendance.update(new)
+    return {
+        "success": True
+    }

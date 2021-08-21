@@ -69,7 +69,18 @@ def post_batch(batch_num):
 @router.get('/batch')
 def get_batch():
     query = session.query(Batch).all()
-    return {"success": True, 'batchs': [batch.format() for batch in query]}
+    return {"success": True, 'batches': [batch.format() for batch in query]}
+
+
+# To change the batch
+@router.patch('/batch')
+def patch_batch(_id: int, num: int):
+    new = session.query(Batch).get(_id)
+    new.batch_num = num
+    Batch.update(new)
+    return {
+        "success": True
+    }
 
 
 # To insert Student
