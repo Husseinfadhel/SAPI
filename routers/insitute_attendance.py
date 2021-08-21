@@ -19,6 +19,19 @@ def post_attendance(date, batch_id, institute_id):
     }
 
 
+# To change attendance
+@router.patch('/attendance')
+def patch_attendance(_id: int, date: str, batch_id: int, institute_id: int):
+    new = session.query(Attendance).get(_id)
+    new.date = date
+    new.batch_id = batch_id
+    new.institute_id = institute_id
+    Attendance.update(new)
+    return {
+        "success": True
+    }
+
+
 # insert students attendance
 @router.post('/students_attendance')
 def post_student_attendance(attendance_id, student_id, attend: int):

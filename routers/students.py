@@ -51,8 +51,9 @@ def get_institute():
 # Update institute
 @router.patch('/institute')
 def patch_institute(institute_id: int, name: str):
-    new = Institute(name=name)
-    Institute.update(Institute)
+    new = session.query(Institute).get(institute_id)
+    new.name = name
+    Institute.update(new)
     return {"success": True}
 
 
@@ -139,6 +140,18 @@ def post_installment(name: str, date: str, institute_id: int, batch_id):
     return {"success": True}
 
 
+# To change installment
+@router.patch('/installment')
+def patch_installment(name: str, institute_id: int, date: str, batch_id: int, _id: int):
+    new = session.query(Installment).get(_id)
+    new.name = name
+    new.date = date
+    new.institute_id = institute_id
+    new.batch_id = batch_id
+    Installment.update(new)
+    return {"success": True}
+
+
 # To insert student Installment
 
 @router.post("/student-installment")
@@ -146,6 +159,21 @@ def student_installment(student_id: int, install_id: int, received: int, institu
     new = Student_Installment(
         student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
     Student_Installment.insert(new)
+    return {
+        "success": True
+    }
+
+
+# To change student installment
+@router.patch('/student-installment')
+def patch_student_installment(student_id: int, receive: int, installment_id: int, institute_id: int,
+                              _id: int):
+    new = session.query(Student_Installment).get(_id)
+    new.student_id = student_id
+    new.installment_id = installment_id
+    new.receive = receive
+    new.institute_id = institute_id
+    Student_Installment.update(new)
     return {
         "success": True
     }
