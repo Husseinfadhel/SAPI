@@ -29,12 +29,22 @@ def post_student_attendance(attendance_id, student_id, attend: int):
     }
 
 
-# need fixing
 # get student attendance by institute id
 @router.get('/students-attendance-institute-bid')
 def students_attendance_institute(institute_id: int):
-    query = session.query(Student_Attendance).join(Student).all()
-    print(query)
-    datalist = [record.format() for record in query]
-    print(datalist)
-    return datalist
+    query = session.query(Student).filter_by(institute_id=institute_id).all()
+    students = [record.students() for record in query]
+    new_attend = {}
+    enlist = []
+    for stu in students:
+        print(stu)
+        attendance = session.query(Student_Attendance).filter_by(student_id=stu['id']).all()
+        for attend in [att.format() for att in attendance]:
+            new_attend['student_attendance_id'] = attend['id']
+            new_attend['attended'] = attend['attended']
+            enlist.append(new_attend)
+            new_attend = {}
+        stu.update({"students_attendace": enlist})
+        enlist = []
+
+    return students
