@@ -33,11 +33,11 @@ def main_admin():
 
 # To insert Institute
 @router.post("/institute")
-def instituteInsert(name: str):
+def post_institute(name: str):
     new = Institute(name=name)
     Institute.insert(new)
 
-    return {"Response": "Done"}
+    return {"success": True}
 
 
 # To get Institutes
@@ -46,6 +46,14 @@ def get_institute():
     query = session.query(Institute).all()
     return {'success': True,
             "institutes": [inst.format() for inst in query]}
+
+
+# Update institute
+@router.patch('/institute')
+def patch_institute(institute_id: int, name: str):
+    new = Institute(name=name)
+    Institute.update(Institute)
+    return {"success": True}
 
 
 # To insert Batch

@@ -37,7 +37,6 @@ def students_attendance_institute(institute_id: int):
     new_attend = {}
     enlist = []
     for stu in students:
-        print(stu)
         attendance = session.query(Student_Attendance).filter_by(student_id=stu['id']).all()
         for attend in [att.format() for att in attendance]:
             new_attend['student_attendance_id'] = attend['id']
