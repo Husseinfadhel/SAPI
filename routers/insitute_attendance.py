@@ -32,21 +32,16 @@ def patch_attendance(_id: int, date: str, batch_id: int, institute_id: int):
     }
 
 
-# insert students attendance
-@router.post('/students-attendance')
-def post_student_attendance(attendance_id, student_id, attend: int):
-    new = Student_Attendance(attendance_id=attendance_id, student_id=student_id, attended=attend)
-    Student_Attendance.insert(new)
-    return {
-        "success": True
-    }
-
-
 # get student attendance bulky
 @router.get('/students-attendance')
 def students_attendance_institute():
     query = session.query(Student).filter_by().all()
     students = [record.students() for record in query]
+    query2 = session.query(Attendance).all()
+    paternalist = {"students": students,
+                   "attendance": [record.format() for record in query2]
+
+                   }
     new_attend = {}
     enlist = []
     for stu in students:
@@ -54,16 +49,17 @@ def students_attendance_institute():
         for attend in [att.format() for att in attendance]:
             new_attend['student_attendance_id'] = attend['id']
             new_attend['attended'] = attend['attended']
+            new_attend['attendance_id'] = attend['attendance_id']
             enlist.append(new_attend)
             new_attend = {}
-        stu.update({"attendace": enlist})
+        stu.update({"student_attendance": enlist})
         enlist = []
 
-    return students
+    return paternalist
 
 
 # To change Student Attendance
-@router.patch('/students_attendance')
+@router.patch('/students-attendance')
 def students_attendance(_id: int, student_id: int, attend_id: int, attended: int):
     new = session.query(Student_Attendance).get(_id)
     new.student_id = student_id
