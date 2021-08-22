@@ -42,10 +42,10 @@ def post_student_attendance(attendance_id, student_id, attend: int):
     }
 
 
-# get student attendance by institute id
-@router.get('/students-attendance-institute-bid')
-def students_attendance_institute(institute_id: int):
-    query = session.query(Student).filter_by(institute_id=institute_id).all()
+# get student attendance bulky
+@router.get('/students-attendance')
+def students_attendance_institute():
+    query = session.query(Student).filter_by().all()
     students = [record.students() for record in query]
     new_attend = {}
     enlist = []
