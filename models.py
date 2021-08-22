@@ -102,6 +102,14 @@ class Attendance(Operation):
     student_attendance = relationship(
         "Student_Attendance", backref="Attendance", lazy="dynamic")
 
+    def format(self):
+        return {
+            "id": self.id,
+            "date": self.date,
+            "batch_id": self.batch_id,
+            "institute_id": self.institute_id
+        }
+
 
 class Student_Attendance(Operation):
     __tablename__ = "Student_Attendance"
