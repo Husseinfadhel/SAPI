@@ -56,7 +56,7 @@ def students_attendance_institute():
             new_attend['attended'] = attend['attended']
             enlist.append(new_attend)
             new_attend = {}
-        stu.update({"students_attendace": enlist})
+        stu.update({"attendace": enlist})
         enlist = []
 
     return students
