@@ -28,13 +28,17 @@ class Operation(Base):
 class Users(Operation):
     __tablename__ = 'Users'
     id = Column(Integer, primary_key=True)
+    name = Column(String)
     username = Column(String, unique=True)
     password = Column(Integer, unique=True)
+
     def format(self):
-        return{
-            "user":self.username,
-            "pass":self.password
+        return {
+            "user": self.username,
+            "pass": self.password,
+            "name": self.name
         }
+
 
 class Student(Operation):
     __tablename__ = "Student"
