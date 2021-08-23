@@ -1,11 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File
 from models import session, Institute, Student, Student_Installment, Installment, Batch
 from typing import Optional
 import qrcode
-from PIL import ImageDraw, ImageFont
+from PIL import ImageDraw, ImageFont, Image
 import arabic_reshaper
 from bidi.algorithm import get_display
 import pathlib
+import os
+from io import BytesIO
 
 router = APIRouter()
 
@@ -86,11 +88,17 @@ def patch_batch(_id: int, num: int):
 # To insert Student
 @router.post("/student")
 def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int, phone: Optional[int],
-                 note: Optional[str] = "لا يوجد"):
+                 note: Optional[str] = "لا يوجد", picture: bytes = File('default')
+                 ):
     newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone, note=note,
                          batch_id=batch_id)
+
     Student.insert(newstudent)
+
     query = session.query(Student).get(newstudent.id)
+    picture = BytesIO(picture)
+    image = get_picture(picture, query.id, query.name)
+    query.picture = image['image_path']
     qr = qr_gen(query.id, name)
     query.qr = qr['qrpath']
     Student.update(query)
@@ -100,6 +108,25 @@ def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int
                                           installment_id=_.format()['id'])
         Student_Installment.insert(new_install)
     return {"success": True}
+
+
+# to change student info
+@router.patch('/student')
+def student(_id, name: str, dob, institute_id, batch_id, picture, note: Optional[str] = "لا يوجد"):
+    query = session.query(Student).get(_id)
+    print(query)
+    query.name = name
+    query.dob = dob
+    query.institute_id = institute_id
+    query.batch_id = batch_id
+    query.note = note
+    query.picture = picture
+    os.remove(query.qr)
+    new = qr_gen(_id, name)
+    query.qr = new['qrpath']
+    return {
+        'success': True
+    }
 
 
 # To get students info by institute and batch
@@ -278,10 +305,24 @@ def qr_gen(id_num, name):
     path = pathlib.Path('.')
     full_path = path.absolute()
     my_path = full_path.as_posix()
-    imagname = '{}.png'.format(arabic)
+    imagname = '{}-{}.png'.format(id_num, arabic)
     my_path = my_path + '/qr/' + imagname
     img.save(my_path, 'PNG')
     return {
         "qrpath": my_path
+
+    }
+
+
+def get_picture(picture, _id, name):
+    img = Image.open(picture)
+    path = pathlib.Path('.')
+    full_path = path.absolute()
+    my_path = full_path.as_posix()
+    imagname = '{}-{}.jpg'.format(_id, name)
+    my_path = my_path + '/images/' + imagname
+    img.save(my_path, 'JPEG')
+    return {
+        "image_path": my_path
 
     }
