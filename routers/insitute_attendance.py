@@ -78,8 +78,18 @@ def attendance_start(_id):
     query = session.query(Student).get(_id)
     student = query.format()
     query2 = session.query(Student_Attendance).filter_by(student_id=_id, attended=0)
-    query3 = session.query(Student_Attendance).filter_by(student_id=_id).all()
-    print([record.format() for record in query3])
-
+    query3 = session.query(Student_Attendance).join(Attendance).filter(
+        Student_Attendance.student_id == _id).order_by(Attendance.date).all()
+    attend = [record.format() for record in query3]
+    incrementally_absence = 0
+    garbage = []
+    for record in attend:
+        if record['attended'] == 0:
+            garbage.append(True)
+        elif len(garbage) == 0:
+            break
+        else:
+            incrementally_absence += 1
     student.update({"total_absence": query2.count()})
+    student.update({"incrementally_absence": incrementally_absence})
     return student

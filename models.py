@@ -132,7 +132,8 @@ class Student_Attendance(Operation):
             "student_id": self.Student.id,
             "attendance_id": self.attendance_id,
             "student_name": self.Student.name,
-            "attended": self.attended
+            "attended": self.attended,
+            "date": self.Attendance.date
         }
 
 
