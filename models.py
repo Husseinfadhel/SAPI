@@ -30,7 +30,11 @@ class Users(Operation):
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True)
     password = Column(Integer, unique=True)
-
+    def format(self):
+        return{
+            "user":self.username,
+            "pass":self.password
+        }
 
 class Student(Operation):
     __tablename__ = "Student"

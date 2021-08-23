@@ -69,3 +69,17 @@ def students_attendance(_id: int, student_id: int, attend_id: int, attended: int
     return {
         "success": True
     }
+
+
+# To start students Attendance counting
+
+@router.get('/attendance-start')
+def attendance_start(_id):
+    query = session.query(Student).get(_id)
+    student = query.format()
+    query2 = session.query(Student_Attendance).filter_by(student_id=_id, attended=0)
+    query3 = session.query(Student_Attendance).filter_by(student_id=_id).all()
+    print([record.format() for record in query3])
+
+    student.update({"total_absence": query2.count()})
+    return student

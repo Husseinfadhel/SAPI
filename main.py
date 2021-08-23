@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from models import session, engine, Base
-from routers import students, insitute_attendance
+from routers import students, insitute_attendance, users
 
 Base.metadata.create_all(engine)
 
@@ -23,6 +23,7 @@ def create_app(test_config=None):
     )
     app.include_router(students.router)
     app.include_router(insitute_attendance.router)
+    app.include_router(users.router)
     return app
 
 

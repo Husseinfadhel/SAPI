@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, File
 from models import session, Institute, Student, Student_Installment, Installment, Batch
 from typing import Optional
 import qrcode
