@@ -206,8 +206,8 @@ def install_student(student_id, install_id):
 @router.get('/students')
 def students():
     query = session.query(Student).all()
-    student = [record.format() for record in query]
-    return student
+    stu = [record.format() for record in query]
+    return stu
 
 
 # To get student image & qr by id
@@ -356,4 +356,14 @@ def student_installments_by_institute_id(institute_id):
         stu['installment_received'] = newlist
     return result
 
-# to get installments by institute id and batch id
+
+# To get Batches and institutes
+@router.get('/students-form')
+def students_form():
+    institutes = session.query(Institute).all()
+    batches = session.query(Batch).all()
+    form = {
+        "institutes": [record.format() for record in institutes],
+        "batches": [record.format() for record in batches]
+    }
+    return form
