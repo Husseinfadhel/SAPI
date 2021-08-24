@@ -12,14 +12,21 @@ router = APIRouter()
 # insert Attendance
 @router.post('/attendance')
 def post_attendance(date, batch_id, institute_id):
-    new = Attendance(date=date, batch_id=batch_id, institute_id=institute_id)
-    Attendance.insert(new)
-    query = session.query(Student).filter_by(batch_id=batch_id, institute_id=institute_id).all()
-    for stu in [qu.students() for qu in query]:
-        new_attend = Student_Attendance(student_id=stu['id'], attendance_id=new.id)
-        Student_Attendance.insert(new_attend)
+    if batch_id and date:
+        new = Attendance(date=date, batch_id=batch_id,
+                         institute_id=institute_id)
+        Attendance.insert(new)
+        query = session.query(Student).filter_by(
+            batch_id=batch_id, institute_id=institute_id).all()
+        for stu in [qu.students() for qu in query]:
+            new_attend = Student_Attendance(
+                student_id=stu['id'], attendance_id=new.id)
+            Student_Attendance.insert(new_attend)
+        return {
+            "success": True
+        }
     return {
-        "success": True
+        "success": False
     }
 
 
@@ -49,7 +56,8 @@ def students_attendance_institute():
     new_attend = {}
     enlist = []
     for stu in students:
-        attendance = session.query(Student_Attendance).filter_by(student_id=stu['id']).all()
+        attendance = session.query(Student_Attendance).filter_by(
+            student_id=stu['id']).all()
         for attend in [att.format() for att in attendance]:
             new_attend['student_attendance_id'] = attend['id']
             new_attend['attended'] = attend['attended']
@@ -64,14 +72,15 @@ def students_attendance_institute():
 
 # To change Student Attendance
 @router.patch('/students-attendance')
-def students_attendance(_id: int, student_id: int, attend_id: int, attended: int):
-    new = session.query(Student_Attendance).get(_id)
-    new.student_id = student_id
-    new.attendance_id = attend_id
+def students_attendance(student_attendance_id: int, attended: int):
+    new = session.query(Student_Attendance).get(student_attendance_id)
     new.attended = attended
     Student_Attendance.update(new)
+    query = session.query(Student).get(new.student_id)
     return {
-        "success": True
+        "success": True,
+        "student_attendance_id": student_attendance_id,
+        "student_name": query.name
     }
 
 
@@ -81,11 +90,14 @@ def students_attendance(_id: int, student_id: int, attend_id: int, attended: int
 def attendance_start(student_id: int):
     query = session.query(Student).get(student_id)
     student = query.format()
-    total_absence = session.query(Student_Attendance).filter_by(student_id=student_id, attended=0)
+    total_absence = session.query(Student_Attendance).filter_by(
+        student_id=student_id, attended=0)
     incremental = session.query(Student_Attendance).join(Attendance).filter(
         Student_Attendance.student_id == student_id)
-    student_attendance_id = incremental.order_by(desc(Attendance.date)).limit(1)
-    student_attendance_id = [record.format() for record in student_attendance_id]
+    student_attendance_id = incremental.order_by(
+        desc(Attendance.date)).limit(1)
+    student_attendance_id = [record.format()
+                             for record in student_attendance_id]
     incremental_absence = incremental.order_by(Attendance.date).all()
     attend = [record.format() for record in incremental_absence]
     incrementally_absence = 0
@@ -104,7 +116,8 @@ def attendance_start(student_id: int):
     finalist = []
     stu = {}
     for record in installments_list:
-        stu.update({'installment_name': record['install_name'], "received": record["received"]})
+        stu.update(
+            {'installment_name': record['install_name'], "received": record["received"], "installment_id": record["installment_id"]})
         finalist.append(stu)
         stu = {}
     student.update({"total_absence": total_absence.count()})

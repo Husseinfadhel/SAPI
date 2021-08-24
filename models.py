@@ -65,6 +65,7 @@ class Student(Operation):
             "qr": self.qr,
             "note": self.note,
             "batch_id": self.batch_id,
+            "batch_num": self.Batch.batch_num,
             "photo": self.picture,
             "institute_id": self.institute_id,
             "institute": self.Institute.name
@@ -211,7 +212,8 @@ class Student_Installment(Operation):
         return {
             "id": self.Student.id,
             "name": self.Student.name,
-            "Institute_id": self.Student.institute_id,
+            "institute_id": self.Student.institute_id,
+            "installment_id": self.Installment.id,
             "install_name": self.Installment.name,
             "received": self.receive
 
