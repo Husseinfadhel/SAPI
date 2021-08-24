@@ -1,7 +1,10 @@
 from fastapi import APIRouter
-from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, Batch, Student_Installment,\
+from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, Batch, \
+    Student_Installment, \
     Installment
-from typing import Optional
+from fastapi.responses import FileResponse
+from sqlalchemy import desc
+from PIL import Image
 
 router = APIRouter()
 
@@ -75,15 +78,19 @@ def students_attendance(_id: int, student_id: int, attend_id: int, attended: int
 # To start students Attendance counting
 
 @router.get('/attendance-start')
-def attendance_start(_id):
-    query = session.query(Student).get(_id)
+def attendance_start(student_id: int):
+    query = session.query(Student).get(student_id)
     student = query.format()
-    total_absence = session.query(Student_Attendance).filter_by(student_id=_id, attended=0)
-    incremental_absence = session.query(Student_Attendance).join(Attendance).filter(
-        Student_Attendance.student_id == _id).order_by(Attendance.date).all()
+    total_absence = session.query(Student_Attendance).filter_by(student_id=student_id, attended=0)
+    incremental = session.query(Student_Attendance).join(Attendance).filter(
+        Student_Attendance.student_id == student_id)
+    student_attendance_id = incremental.order_by(desc(Attendance.date)).limit(1)
+    student_attendance_id = [record.format() for record in student_attendance_id]
+    incremental_absence = incremental.order_by(Attendance.date).all()
     attend = [record.format() for record in incremental_absence]
     incrementally_absence = 0
     absence_list = []
+    student.update({"student_attendance_id": student_attendance_id[0]['id']})
     for record in attend:
         if record['attended'] == 0:
             absence_list.append(True)
@@ -92,7 +99,7 @@ def attendance_start(_id):
         else:
             incrementally_absence += 1
     installments = session.query(Student_Installment).join(Installment).filter(Student_Installment.student_id
-                                                                               == _id).all()
+                                                                               == student_id).all()
     installments_list = [student.student() for student in installments]
     finalist = []
     stu = {}
@@ -103,4 +110,10 @@ def attendance_start(_id):
     student.update({"total_absence": total_absence.count()})
     student.update({"incrementally_absence": incrementally_absence})
     student.update({"installments": finalist})
+
+    path = student['photo']
+    file = FileResponse(path)
+
+    student['photo'] = file
+
     return student
