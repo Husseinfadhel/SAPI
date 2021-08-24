@@ -2,7 +2,6 @@ from fastapi import APIRouter
 from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, Batch, \
     Student_Installment, \
     Installment
-from fastapi.responses import FileResponse
 from sqlalchemy import desc
 from PIL import Image
 
@@ -123,10 +122,6 @@ def attendance_start(student_id: int):
     student.update({"total_absence": total_absence.count()})
     student.update({"incrementally_absence": incrementally_absence})
     student.update({"installments": finalist})
-
-    path = student['photo']
-    file = FileResponse(path)
-
-    student['photo'] = file
-
     return student
+
+

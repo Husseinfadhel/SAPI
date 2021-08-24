@@ -8,8 +8,10 @@ from bidi.algorithm import get_display
 import pathlib
 import os
 from io import BytesIO
+from fastapi.responses import FileResponse
 
 router = APIRouter()
+
 
 # Function to generate qr image with student id and name embedded in it
 
@@ -200,6 +202,29 @@ def install_student(student_id, install_id):
     return liststudentinstall
 
 
+# get students bulky
+@router.get('/students')
+def students():
+    query = session.query(Student).all()
+    student = [record.format() for record in query]
+    return student
+
+
+# To get student image & qr by id
+@router.get('/photo')
+def photo(student_id):
+    query = session.query(Student).filter_by(id=student_id).all()
+    stu = [record.format() for record in query]
+    qr_path = stu[0]['qr']
+    image_path = stu[0]['photo']
+    qr = FileResponse(qr_path)
+    image = FileResponse(image_path)
+    return {
+        "qr": qr,
+        "photo": image
+    }
+
+
 # To insert Installment
 
 @router.post("/installment")
@@ -330,6 +355,5 @@ def student_installments_by_institute_id(institute_id):
             dicto = {}
         stu['installment_received'] = newlist
     return result
-
 
 # to get installments by institute id and batch id
