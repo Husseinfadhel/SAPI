@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, Batch, Student_Installment
+from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, Batch, Student_Installment,\
+    Installment
 from typing import Optional
 
 router = APIRouter()
@@ -77,19 +78,29 @@ def students_attendance(_id: int, student_id: int, attend_id: int, attended: int
 def attendance_start(_id):
     query = session.query(Student).get(_id)
     student = query.format()
-    query2 = session.query(Student_Attendance).filter_by(student_id=_id, attended=0)
-    query3 = session.query(Student_Attendance).join(Attendance).filter(
+    total_absence = session.query(Student_Attendance).filter_by(student_id=_id, attended=0)
+    incremental_absence = session.query(Student_Attendance).join(Attendance).filter(
         Student_Attendance.student_id == _id).order_by(Attendance.date).all()
-    attend = [record.format() for record in query3]
+    attend = [record.format() for record in incremental_absence]
     incrementally_absence = 0
-    garbage = []
+    absence_list = []
     for record in attend:
         if record['attended'] == 0:
-            garbage.append(True)
-        elif len(garbage) == 0:
+            absence_list.append(True)
+        elif len(absence_list) == 0:
             break
         else:
             incrementally_absence += 1
-    student.update({"total_absence": query2.count()})
+    installments = session.query(Student_Installment).join(Installment).filter(Student_Installment.student_id
+                                                                               == _id).all()
+    installments_list = [student.student() for student in installments]
+    finalist = []
+    stu = {}
+    for record in installments_list:
+        stu.update({'installment_name': record['install_name'], "received": record["received"]})
+        finalist.append(stu)
+        stu = {}
+    student.update({"total_absence": total_absence.count()})
     student.update({"incrementally_absence": incrementally_absence})
+    student.update({"installments": finalist})
     return student
