@@ -8,14 +8,24 @@ from bidi.algorithm import get_display
 import pathlib
 import os
 from io import BytesIO
+from fastapi.responses import FileResponse
 
 router = APIRouter()
 
+
+# Function to get correct path optimized with windows directory
+def get_path():
+    path = pathlib.Path('.')
+    full_path = path.absolute()
+    my_path = full_path.as_posix()
+    return my_path
+
+
 # Function to generate qr image with student id and name embedded in it
 
-
-def qr_gen(id_num, name):
+def qr_gen(id_num, name, institute, batch):
     id_num = str(id_num)
+    batch = str(batch)
     arabic = name
     name = arabic_reshaper.reshape(arabic)
     name = get_display(name, upper_is_rtl=True)
@@ -23,11 +33,13 @@ def qr_gen(id_num, name):
     draw = ImageDraw.Draw(img)
     font = ImageFont.truetype('arial.ttf', 20)
     draw.text((150, 250), name, font=font, align="right")
-    path = pathlib.Path('.')
-    full_path = path.absolute()
-    my_path = full_path.as_posix()
+    my_path = get_path()
     imagname = '{}-{}.png'.format(id_num, arabic)
-    my_path = my_path + '/qr/' + imagname
+    if batch not in os.listdir(my_path + '/qr/'):
+        os.makedirs(my_path + '/qr/' + batch)
+    if institute not in os.listdir(my_path + '/qr/' + batch):
+        os.makedirs(my_path + '/qr/' + batch + '/' + institute)
+    my_path = my_path + '/qr/' + batch + '/' + institute + '/' + imagname
     img.save(my_path, 'PNG')
     return {
         "qrpath": my_path
@@ -35,13 +47,17 @@ def qr_gen(id_num, name):
     }
 
 
-def get_picture(picture, _id, name):
+def get_picture(picture, _id, name, institute, batch):
+    batch = str(batch)
+
     img = Image.open(picture)
-    path = pathlib.Path('.')
-    full_path = path.absolute()
-    my_path = full_path.as_posix()
-    imagname = '{}-{}.jpg'.format(_id, name)
-    my_path = my_path + '/images/' + imagname
+    my_path = get_path()
+    if batch not in os.listdir(my_path + '/images/'):
+        os.makedirs(my_path + '/images/' + batch)
+    if institute not in os.listdir(my_path + '/images/' + batch):
+        os.makedirs(my_path + '/images/' + batch + '/' + institute)
+    image = '{}-{}.jpg'.format(_id, name)
+    my_path = my_path + '/images/' + batch + '/' + institute + '/' + image
     img.save(my_path, 'JPEG')
     return {
         "image_path": my_path
@@ -130,12 +146,23 @@ def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int
                          batch_id=batch_id)
 
     Student.insert(newstudent)
+    batch = session.query(Batch).filter_by(id=batch_id).all()
+    institute = session.query(Institute).filter_by(id=institute_id).all()
 
+    my_path = get_path()
+    if 'qr' not in os.listdir(my_path):
+        os.makedirs(my_path + '/qr')
+    if 'images' not in os.listdir(my_path):
+        os.makedirs(my_path + '/images')
+    for record in batch:
+        batch_name = record.format()['batch_num']
+    for record in institute:
+        institute_name = record.format()['name']
     query = session.query(Student).get(newstudent.id)
     picture = BytesIO(picture)
-    image = get_picture(picture, query.id, query.name)
+    image = get_picture(picture, query.id, query.name, institute_name, batch_name)
     query.picture = image['image_path']
-    qr = qr_gen(query.id, name)
+    qr = qr_gen(query.id, name, institute_name, batch_name)
     query.qr = qr['qrpath']
     Student.update(query)
     installment = session.query(Installment).filter_by(
@@ -198,6 +225,29 @@ def install_student(student_id, install_id):
                                   student_id, Student_Installment.installment_id == install_id).all()
     liststudentinstall = [inst.format() for inst in query]
     return liststudentinstall
+
+
+# get students bulky
+@router.get('/students')
+def students():
+    query = session.query(Student).all()
+    stu = [record.format() for record in query]
+    return stu
+
+
+# To get student image & qr by id
+@router.get('/photo')
+def photo(student_id):
+    query = session.query(Student).filter_by(id=student_id).all()
+    stu = [record.format() for record in query]
+    qr_path = stu[0]['qr']
+    image_path = stu[0]['photo']
+    qr = FileResponse(qr_path)
+    image = FileResponse(image_path)
+    return {
+        "qr": qr,
+        "photo": image
+    }
 
 
 # To insert Installment
@@ -332,4 +382,13 @@ def student_installments_by_institute_id(institute_id):
     return result
 
 
-# to get installments by institute id and batch id
+# To get Batches and institutes
+@router.get('/students-form')
+def students_form():
+    institutes = session.query(Institute).all()
+    batches = session.query(Batch).all()
+    form = {
+        "institutes": [record.format() for record in institutes],
+        "batches": [record.format() for record in batches]
+    }
+    return form
