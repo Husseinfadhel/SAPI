@@ -2,7 +2,8 @@ from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, Date,
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-engine = create_engine('sqlite:///sapi.db')
+engine = create_engine('sqlite:///sapi.db',
+                       connect_args={"check_same_thread": False})
 
 Base = declarative_base()
 
