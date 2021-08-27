@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query
 from models import session, Institute, Student, Student_Installment, Installment, Batch
 from typing import Optional
 import qrcode
@@ -9,6 +9,7 @@ import pathlib
 import os
 from io import BytesIO
 from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 router = APIRouter()
 
@@ -43,10 +44,10 @@ def qr_gen(id_num, name, institute, batch):
     }
 
 
-def get_picture(picture, _id, name, institute, batch):
+def photo_save(photo, _id, name, institute, batch):
     batch = str(batch)
 
-    img = Image.open(picture)
+    img = Image.open(photo)
     my_path = get_path()
     image = '{}-{}.jpg'.format(_id, name)
     my_path = my_path + '/images/' + batch + '/' + institute + '/' + image
@@ -144,42 +145,58 @@ def patch_batch(_id: int, num: int):
     }
 
 
-# To insert Student
+# class Students(BaseModel):
+#     name: str
+#     batch_id: int
+#     dob: Optional[str]
+#     institute_id: int
+#     phone: Optional[int]
+#     note: Optional[str] = "لا يوجد"
+
+    # To insert Student
+
 @router.post("/student")
-def post_student(name: str, batch_id: int, dob: Optional[str], institute_id: int, phone: Optional[int],
-                 note: Optional[str] = "لا يوجد", picture: bytes = File('default')
-                 ):
-    newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone, note=note,
-                         batch_id=batch_id)
+def post_student(name: str = Query("name"),
+                 batch_id: int = Query("batch_id"),
+                 dob: Optional[str] = Query("dob"),
+                 institute_id: int = Query("institute_id"),
+                 phone: Optional[int] = Query("phone"),
+                 note: Optional[str] = Query("note"),
+                 photo: bytes = File("photo")):
+    print(batch_id)
+    try:
+        newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone, note=note,
+                             batch_id=batch_id)
 
-    Student.insert(newstudent)
-    batch = session.query(Batch).filter_by(id=batch_id).all()
-    institute = session.query(Institute).filter_by(id=institute_id).all()
+        Student.insert(newstudent)
+        batch = session.query(Batch).get(batch_id)
+        institute = session.query(Institute).get(institute_id)
 
-    for record in batch:
-        batch_name = record.format()['batch_num']
-    for record in institute:
-        institute_name = record.format()['name']
-    query = session.query(Student).get(newstudent.id)
-    picture = BytesIO(picture)
-    image = get_picture(picture, query.id, query.name,
-                        institute_name, batch_name)
-    query.picture = image['image_path']
-    qr = qr_gen(query.id, name, institute_name, batch_name)
-    query.qr = qr['qrpath']
-    Student.update(query)
-    installment = session.query(Installment).filter_by(
-        institute_id=institute_id, batch_id=batch_id).all()
-    for _ in installment:
-        new_install = Student_Installment(student_id=query.id, institute_id=institute_id,
-                                          installment_id=_.format()['id'])
-        Student_Installment.insert(new_install)
-    return {"success": True}
+        batch_name = batch.batch_num
+        institute_name = institute.name
+
+        query = session.query(Student).get(newstudent.id)
+        photo = BytesIO(photo)
+        image = photo_save(photo, query.id, query.name,
+                           institute_name, batch_name)
+        query.photo = image['image_path']
+        qr = qr_gen(query.id, name, institute_name, batch_name)
+        query.qr = qr['qrpath']
+        Student.update(query)
+        installment = session.query(Installment).filter_by(
+            institute_id=institute_id, batch_id=batch_id).all()
+        for _ in installment:
+            new_install = Student_Installment(student_id=query.id, institute_id=institute_id,
+                                              installment_id=_.format()['id'])
+            Student_Installment.insert(new_install)
+        return {"success": True}, 200
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # to change student info
 @router.patch('/student')
-def student(_id, name: str, dob, institute_id, batch_id, picture, note: Optional[str] = "لا يوجد"):
+def student(_id, name: str, dob, institute_id, batch_id, photo, note: Optional[str] = "لا يوجد"):
     query = session.query(Student).get(_id)
     print(query)
     query.name = name
@@ -187,7 +204,7 @@ def student(_id, name: str, dob, institute_id, batch_id, picture, note: Optional
     query.institute_id = institute_id
     query.batch_id = batch_id
     query.note = note
-    query.picture = picture
+    query.photo = photo
     os.remove(query.qr)
     batch = session.query(Batch).filter_by(id=batch_id).all()
     institute = session.query(Institute).filter_by(id=institute_id).all()
