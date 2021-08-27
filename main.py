@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from models import session, engine, Base
 from routers import students, insitute_attendance, users
+from fastapi.responses import PlainTextResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 Base.metadata.create_all(engine)
 
@@ -24,8 +26,12 @@ def create_app(test_config=None):
     app.include_router(students.router)
     app.include_router(insitute_attendance.router)
     app.include_router(users.router)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def my_exception_handler(request, exception):
+        return PlainTextResponse(str(exception.detail), status_code=exception.status_code)
+
     return app
 
 
 app = create_app()
-
