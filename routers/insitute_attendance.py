@@ -114,10 +114,16 @@ def attendance_start(student_id: int):
         for record in attend:
             if record['attended'] == 0:
                 absence_list.append(True)
+                if len(absence_list) >= 1 and incrementally_absence == 0:
+                    incrementally_absence = 1
             elif len(absence_list) == 0:
                 break
             else:
-                incrementally_absence += 1
+                if incrementally_absence == 1:
+                    break
+                else:
+                    incrementally_absence += 1
+        print(len(absence_list))
         installments = session.query(Student_Installment).join(Installment).filter(Student_Installment.student_id
                                                                                    == student_id).all()
         installments_list = [student.student() for student in installments]
