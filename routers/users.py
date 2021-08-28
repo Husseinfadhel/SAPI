@@ -32,9 +32,7 @@ def login(username: str, password: int):
                     "name": record['name']
                 }
             else:
-                return {
-                    "success": False,
-                }
+                break
     except:
         raise StarletteHTTPException(401, "Unauthorized")
 
