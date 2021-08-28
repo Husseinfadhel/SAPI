@@ -1,5 +1,5 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query
-from models import session, Institute, Student, Student_Installment, Installment, Batch
+from models import session, Institute, Student, Student_Installment, Installment
 from typing import Optional
 import qrcode
 from PIL import ImageDraw, ImageFont, Image
@@ -24,9 +24,8 @@ def get_path():
 
 # Function to generate qr image with student id and name embedded in it
 
-def qr_gen(id_num, name, institute, batch):
+def qr_gen(id_num, name, institute):
     id_num = str(id_num)
-    batch = str(batch)
     arabic = name
     name = arabic_reshaper.reshape(arabic)
     name = get_display(name, upper_is_rtl=True)
@@ -36,7 +35,7 @@ def qr_gen(id_num, name, institute, batch):
     draw.text((150, 250), name, font=font, align="right")
     my_path = get_path()
     imagname = '{}-{}.png'.format(id_num, arabic)
-    my_path = my_path + '/qr/' + batch + '/' + institute + '/' + imagname
+    my_path = my_path + '/qr/' + institute + '/' + imagname
     img.save(my_path, 'PNG')
     return {
         "qrpath": my_path
@@ -44,13 +43,11 @@ def qr_gen(id_num, name, institute, batch):
     }
 
 
-def photo_save(photo, _id, name, institute, batch):
-    batch = str(batch)
-
+def photo_save(photo, _id, name, institute):
     img = Image.open(photo)
     my_path = get_path()
     image = '{}-{}.jpg'.format(_id, name)
-    my_path = my_path + '/images/' + batch + '/' + institute + '/' + image
+    my_path = my_path + '/images/' + institute + '/' + image
     img.save(my_path, 'JPEG')
     return {
         "image_path": my_path
@@ -83,15 +80,15 @@ def main_admin():
 def post_institute(name: str):
     new = Institute(name=name)
     Institute.insert(new)
-    query = session.query(Batch).all()
     my_path = get_path()
     if 'qr' not in os.listdir(my_path):
         os.makedirs(my_path + '/qr')
     if 'images' not in os.listdir(my_path):
         os.makedirs(my_path + '/images')
-    for batch in [record.format() for record in query]:
-        os.mkdir(my_path + '/images/{}/{}'.format(batch['batch_num'], name))
-        os.mkdir(my_path + '/qr/{}/{}'.format(batch['batch_num'], name))
+    if name not in os.listdir(my_path + '/qr'):
+        os.makedirs(my_path + '/qr/' + name)
+    if name not in os.listdir(my_path + '/images'):
+        os.makedirs(my_path + '/images/' + name)
     return {"success": True}
 
 
@@ -112,79 +109,41 @@ def patch_institute(institute_id: int, name: str):
     return {"success": True}
 
 
-# To insert Batch
-@router.post("/batch")
-def post_batch(batch_num):
-    new = Batch(batch_num=batch_num)
-    Batch.insert(new)
-    my_path = get_path()
-    if 'qr' not in os.listdir(my_path):
-        os.makedirs(my_path + '/qr')
-    if 'images' not in os.listdir(my_path):
-        os.makedirs(my_path + '/images')
-    os.mkdir(my_path + '/images/{}'.format(batch_num))
-    os.mkdir(my_path + '/qr/{}'.format(batch_num))
-    return {"success": True}
-
-
-# To get batch
-@router.get('/batch')
-def get_batch():
-    query = session.query(Batch).all()
-    return {"success": True, 'batches': [batch.format() for batch in query]}
-
-
-# To change the batch
-@router.patch('/batch')
-def patch_batch(_id: int, num: int):
-    new = session.query(Batch).get(_id)
-    new.batch_num = num
-    Batch.update(new)
-    return {
-        "success": True
-    }
-
-
 # class Students(BaseModel):
 #     name: str
-#     batch_id: int
 #     dob: Optional[str]
 #     institute_id: int
 #     phone: Optional[int]
 #     note: Optional[str] = "لا يوجد"
 
-    # To insert Student
+# To insert Student
 
 @router.post("/student")
 def post_student(name: str = Query("name"),
-                 batch_id: int = Query("batch_id"),
                  dob: Optional[str] = Query("dob"),
                  institute_id: int = Query("institute_id"),
                  phone: Optional[int] = Query("phone"),
                  note: Optional[str] = Query("note"),
                  photo: bytes = File("photo")):
-    print(batch_id)
     try:
-        newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone, note=note,
-                             batch_id=batch_id)
+        newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone,
+                             note=note)
 
         Student.insert(newstudent)
-        batch = session.query(Batch).get(batch_id)
         institute = session.query(Institute).get(institute_id)
 
-        batch_name = batch.batch_num
         institute_name = institute.name
 
         query = session.query(Student).get(newstudent.id)
         photo = BytesIO(photo)
         image = photo_save(photo, query.id, query.name,
-                           institute_name, batch_name)
+                           institute_name)
         query.photo = image['image_path']
-        qr = qr_gen(query.id, name, institute_name, batch_name)
+        qr = qr_gen(query.id, name, institute_name)
         query.qr = qr['qrpath']
         Student.update(query)
         installment = session.query(Installment).filter_by(
-            institute_id=institute_id, batch_id=batch_id).all()
+            institute_id=institute_id).all()
         for _ in installment:
             new_install = Student_Installment(student_id=query.id, institute_id=institute_id,
                                               installment_id=_.format()['id'])
@@ -196,35 +155,30 @@ def post_student(name: str = Query("name"),
 
 # to change student info
 @router.patch('/student')
-def student(_id, name: str, dob, institute_id, batch_id, photo, note: Optional[str] = "لا يوجد"):
+def student(_id, name: str, dob, institute_id, photo, note: Optional[str] = "لا يوجد"):
     query = session.query(Student).get(_id)
     print(query)
     query.name = name
     query.dob = dob
     query.institute_id = institute_id
-    query.batch_id = batch_id
     query.note = note
     query.photo = photo
     os.remove(query.qr)
-    batch = session.query(Batch).filter_by(id=batch_id).all()
     institute = session.query(Institute).filter_by(id=institute_id).all()
-
-    for record in batch:
-        batch_name = record.format()['batch_num']
     for record in institute:
         institute_name = record.format()['name']
-    new = qr_gen(_id, name, institute_name, batch_name)
+    new = qr_gen(_id, name, institute_name)
     query.qr = new['qrpath']
     return {
         'success': True
     }
 
 
-# To get students info by institute and batch
+# To get students info by institute
 @router.get("/student-info")
-def student_info(institute_id, batch_id):
+def student_info(institute_id):
     student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-        Student.institute_id == institute_id, Student.batch_id == batch_id).all()
+        Student.institute_id == institute_id).all()
 
     students = [stu.format() for stu in student_join]
 
@@ -280,16 +234,17 @@ def get_qr(student_id):
     qr = FileResponse(qr_path)
     return qr
 
+
 # To insert Installment
 
 
 @router.post("/installment")
-def post_installment(name: str, date: str, institute_id: int, batch_id):
+def post_installment(name: str, date: str, institute_id: int):
     new = Installment(name=name, date=date,
-                      institute_id=institute_id, batch_id=batch_id)
+                      institute_id=institute_id)
     Installment.insert(new)
     query = session.query(Student).filter_by(
-        batch_id=batch_id, institute_id=institute_id).all()
+        institute_id=institute_id).all()
     students = [record.students() for record in query]
     for stu in students:
         student_instal = Student_Installment(installment_id=new.id, student_id=stu['id'],
@@ -300,12 +255,11 @@ def post_installment(name: str, date: str, institute_id: int, batch_id):
 
 # To change installment
 @router.patch('/installment')
-def patch_installment(name: str, institute_id: int, date: str, batch_id: int, _id: int):
+def patch_installment(name: str, institute_id: int, date: str, _id: int):
     new = session.query(Installment).get(_id)
     new.name = name
     new.date = date
     new.institute_id = institute_id
-    new.batch_id = batch_id
     Installment.update(new)
     return {"success": True}
 
@@ -345,10 +299,9 @@ def student_install():
     query = session.query(Student).join(Installment,
                                         Installment.id == Student_Installment.installment_id).join(
         Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
-                                                                          Student.id == Student_Installment.student_id).join(
-        Batch, Batch.id == Student.batch_id).all()
-    query2 = session.query(Installment).join(Batch, Batch.id == Installment.batch_id).join(Institute, Institute.id ==
-                                                                                           Installment.institute_id)
+                                                                          Student.id ==
+                                                                          Student_Installment.student_id).all()
+    query2 = session.query(Installment).join(Institute, Institute.id == Installment.institute_id)
     result = {'students': [record.students() for record in query],
               "installments": [record.installment() for record in query2.all()]}
 
@@ -413,13 +366,11 @@ def student_installments_by_institute_id(institute_id):
     return result
 
 
-# To get Batches and institutes
+# To get institutes
 @router.get('/students-form')
 def students_form():
     institutes = session.query(Institute).all()
-    batches = session.query(Batch).all()
     form = {
-        "institutes": [record.format() for record in institutes],
-        "batches": [record.format() for record in batches]
+        "institutes": [record.format() for record in institutes]
     }
     return form

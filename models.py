@@ -51,7 +51,6 @@ class Student(Operation):
     note = Column(String, nullable=True)
     picture = Column(String, nullable=True)
     institute_id = Column(Integer, ForeignKey("Institute.id"))
-    batch_id = Column(Integer, ForeignKey('Batch.id'))
     installment = relationship(
         "Student_Installment", backref="Student", lazy="dynamic")
     attendance = relationship("Student_Attendance",
@@ -65,8 +64,6 @@ class Student(Operation):
             "phone": self.phone,
             "qr": self.qr,
             "note": self.note,
-            "batch_id": self.batch_id,
-            "batch_num": self.Batch.batch_num,
             "photo": self.picture,
             "institute_id": self.institute_id,
             "institute": self.Institute.name
@@ -77,7 +74,6 @@ class Student(Operation):
             "id": self.id,
             "name": self.name,
             "institute_id": self.Institute.id,
-            "batch_id": self.Batch.id,
 
         }
 
@@ -106,7 +102,6 @@ class Attendance(Operation):
     __tablename__ = "Attendance"
     id = Column(Integer, primary_key=True)
     date = Column(String)
-    batch_id = Column(Integer, ForeignKey('Batch.id'))
     institute_id = Column(Integer, ForeignKey("Institute.id"))
 
     student_attendance = relationship(
@@ -116,7 +111,6 @@ class Attendance(Operation):
         return {
             "id": self.id,
             "date": self.date,
-            "batch_id": self.batch_id,
             "institute_id": self.institute_id
         }
 
@@ -145,7 +139,6 @@ class Installment(Operation):
     name = Column(String)
     date = Column(String)
     institute_id = Column(Integer, ForeignKey("Institute.id"))
-    batch_id = Column(Integer, ForeignKey('Batch.id'))
     student_Installment = relationship(
         "Student_Installment", backref="Installment", lazy="dynamic")
 
@@ -156,7 +149,6 @@ class Installment(Operation):
             "institute_id": self.Institute.id,
             "institute_name": self.Institute.name,
             "date": self.date,
-            "batch_id": self.batch_id
         }
 
     def installment(self):
@@ -165,23 +157,7 @@ class Installment(Operation):
             "name": self.name,
             "institute_id": self.Institute.id,
             "institute_name": self.Institute.name,
-            "date": self.date,
-            "batch_id": self.Batch.id
-        }
-
-
-class Batch(Operation):
-    __tablename__ = "Batch"
-    id = Column(Integer, primary_key=True)
-    batch_num = Column(Integer, unique=True)
-    student = relationship('Student', backref='Batch', lazy='dynamic')
-    attendance = relationship('Attendance', backref='Batch', lazy='dynamic')
-    installment = relationship('Installment', backref='Batch')
-
-    def format(self):
-        return {
-            "id": self.id,
-            "batch_num": self.batch_num
+            "date": self.date
         }
 
 

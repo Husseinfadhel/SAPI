@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, Batch, \
+from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, \
     Student_Installment, \
     Installment
 from sqlalchemy import desc
@@ -10,13 +10,13 @@ router = APIRouter()
 
 # insert Attendance
 @router.post('/attendance')
-def post_attendance(date, batch_id, institute_id):
-    if batch_id and date:
-        new = Attendance(date=date, batch_id=batch_id,
+def post_attendance(date, institute_id):
+    if date:
+        new = Attendance(date=date,
                          institute_id=institute_id)
         Attendance.insert(new)
         query = session.query(Student).filter_by(
-            batch_id=batch_id, institute_id=institute_id).all()
+            institute_id=institute_id).all()
         for stu in [qu.students() for qu in query]:
             new_attend = Student_Attendance(
                 student_id=stu['id'], attendance_id=new.id)
@@ -31,10 +31,9 @@ def post_attendance(date, batch_id, institute_id):
 
 # To change attendance
 @router.patch('/attendance')
-def patch_attendance(_id: int, date: str, batch_id: int, institute_id: int):
+def patch_attendance(_id: int, date: str, institute_id: int):
     new = session.query(Attendance).get(_id)
     new.date = date
-    new.batch_id = batch_id
     new.institute_id = institute_id
     Attendance.update(new)
     return {
@@ -116,12 +115,11 @@ def attendance_start(student_id: int):
     stu = {}
     for record in installments_list:
         stu.update(
-            {'installment_name': record['install_name'], "received": record["received"], "installment_id": record["installment_id"]})
+            {'installment_name': record['install_name'], "received": record["received"],
+             "installment_id": record["installment_id"]})
         finalist.append(stu)
         stu = {}
     student.update({"total_absence": total_absence.count()})
     student.update({"incrementally_absence": incrementally_absence})
     student.update({"installments": finalist})
     return student
-
-
