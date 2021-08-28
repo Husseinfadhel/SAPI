@@ -57,56 +57,68 @@ def photo_save(photo, _id, name, institute):
 # To get Institutes Number , Students
 @router.get("/main-admin")
 def main_admin():
-    students = session.query(Student)
-    institutes = session.query(Institute)
+    try:
+        students = session.query(Student)
+        institutes = session.query(Institute)
 
-    result = {
-        "Response": "OK",
-        "students_count": students.count(),
-        "institutes_count": institutes.count(),
-        "institutes": [institute.format() for institute in institutes.all()]
+        result = {
+            "Response": "OK",
+            "students_count": students.count(),
+            "institutes_count": institutes.count(),
+            "institutes": [institute.format() for institute in institutes.all()]
 
-    }
-    for institute in result["institutes"]:
-        student_count = students.join(
-            Institute, Student.institute_id == Institute.id).filter(institute["id"] == Student.institute_id).count()
+        }
+        for institute in result["institutes"]:
+            student_count = students.join(
+                Institute, Student.institute_id == Institute.id).filter(institute["id"] == Student.institute_id).count()
 
-        institute.update({'students_institute_count': student_count})
-    return result
+            institute.update({'students_institute_count': student_count})
+        return result
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # To insert Institute
 @router.post("/institute")
 def post_institute(name: str):
-    new = Institute(name=name)
-    Institute.insert(new)
-    my_path = get_path()
-    if 'qr' not in os.listdir(my_path):
-        os.makedirs(my_path + '/qr')
-    if 'images' not in os.listdir(my_path):
-        os.makedirs(my_path + '/images')
-    if name not in os.listdir(my_path + '/qr'):
-        os.makedirs(my_path + '/qr/' + name)
-    if name not in os.listdir(my_path + '/images'):
-        os.makedirs(my_path + '/images/' + name)
-    return {"success": True}
+    try:
+        new = Institute(name=name)
+        Institute.insert(new)
+        my_path = get_path()
+        if 'qr' not in os.listdir(my_path):
+            os.makedirs(my_path + '/qr')
+        if 'images' not in os.listdir(my_path):
+            os.makedirs(my_path + '/images')
+        if name not in os.listdir(my_path + '/qr'):
+            os.makedirs(my_path + '/qr/' + name)
+        if name not in os.listdir(my_path + '/images'):
+            os.makedirs(my_path + '/images/' + name)
+        return {"success": True}
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # To get Institutes
 @router.get('/institute')
 def get_institute():
-    query = session.query(Institute).all()
-    return {'success': True,
-            "institutes": [inst.format() for inst in query]}
+    try:
+        query = session.query(Institute).all()
+        return {'success': True,
+                "institutes": [inst.format() for inst in query]}
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # Update institute
 @router.patch('/institute')
 def patch_institute(institute_id: int, name: str):
-    new = session.query(Institute).get(institute_id)
-    new.name = name
-    Institute.update(new)
-    return {"success": True}
+    try:
+        new = session.query(Institute).get(institute_id)
+        new.name = name
+        Institute.update(new)
+        return {"success": True}
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # class Students(BaseModel):
@@ -156,83 +168,104 @@ def post_student(name: str = Query("name"),
 # to change student info
 @router.patch('/student')
 def student(_id, name: str, dob, institute_id, photo, note: Optional[str] = "لا يوجد"):
-    query = session.query(Student).get(_id)
-    print(query)
-    query.name = name
-    query.dob = dob
-    query.institute_id = institute_id
-    query.note = note
-    query.photo = photo
-    os.remove(query.qr)
-    institute = session.query(Institute).filter_by(id=institute_id).all()
-    for record in institute:
-        institute_name = record.format()['name']
-    new = qr_gen(_id, name, institute_name)
-    query.qr = new['qrpath']
-    return {
-        'success': True
-    }
+    try:
+        query = session.query(Student).get(_id)
+        print(query)
+        query.name = name
+        query.dob = dob
+        query.institute_id = institute_id
+        query.note = note
+        query.photo = photo
+        os.remove(query.qr)
+        institute = session.query(Institute).filter_by(id=institute_id).all()
+        for record in institute:
+            institute_name = record.format()['name']
+        new = qr_gen(_id, name, institute_name)
+        query.qr = new['qrpath']
+        return {
+            'success': True
+        }
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # To get students info by institute
 @router.get("/student-info")
 def student_info(institute_id):
-    student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-        Student.institute_id == institute_id).all()
+    try:
+        student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+            Student.institute_id == institute_id).all()
 
-    students = [stu.format() for stu in student_join]
+        students = [stu.format() for stu in student_join]
 
-    return students
+        return students
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # To get students by institute
 @router.get("/students-institute")
 def student_institute(institute_id):
-    student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-        Student.institute_id == institute_id).all()
+    try:
+        student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+            Student.institute_id == institute_id).all()
 
-    students = [stu.format() for stu in student_join]
+        students = [stu.format() for stu in student_join]
 
-    return students
+        return students
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # to get installment of students by student id and install id
 @router.get("/student-installment-bid")
 def install_student(student_id, install_id):
-    installstudent = session.query(Student_Installment).join(Student,
-                                                             Student_Installment.student_id == Student.id).join(
-        Installment, Student_Installment.installment_id == Installment.id)
-    query = installstudent.filter(Student_Installment.student_id ==
-                                  student_id, Student_Installment.installment_id == install_id).all()
-    liststudentinstall = [inst.format() for inst in query]
-    return liststudentinstall
+    try:
+        installstudent = session.query(Student_Installment).join(Student,
+                                                                 Student_Installment.student_id == Student.id).join(
+            Installment, Student_Installment.installment_id == Installment.id)
+        query = installstudent.filter(Student_Installment.student_id ==
+                                      student_id, Student_Installment.installment_id == install_id).all()
+        liststudentinstall = [inst.format() for inst in query]
+        return liststudentinstall
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # get students bulky
 @router.get('/students')
 def students():
-    query = session.query(Student).all()
-    stu = [record.format() for record in query]
-    return stu
+    try:
+        query = session.query(Student).all()
+        stu = [record.format() for record in query]
+        return stu
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # To get student image & qr by id
 @router.get('/photo')
 def get_photo(student_id):
-    query = session.query(Student).filter_by(id=student_id).all()
-    stu = [record.format() for record in query]
-    image_path = stu[0]['photo']
-    image = FileResponse(image_path)
-    return image
+    try:
+        query = session.query(Student).filter_by(id=student_id).all()
+        stu = [record.format() for record in query]
+        image_path = stu[0]['photo']
+        image = FileResponse(image_path)
+        return image
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 @router.get('/qr')
 def get_qr(student_id):
-    query = session.query(Student).filter_by(id=student_id).all()
-    stu = [record.format() for record in query]
-    qr_path = stu[0]['qr']
-    qr = FileResponse(qr_path)
-    return qr
+    try:
+        query = session.query(Student).filter_by(id=student_id).all()
+        stu = [record.format() for record in query]
+        qr_path = stu[0]['qr']
+        qr = FileResponse(qr_path)
+        return qr
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # To insert Installment
@@ -240,55 +273,67 @@ def get_qr(student_id):
 
 @router.post("/installment")
 def post_installment(name: str, date: str, institute_id: int):
-    new = Installment(name=name, date=date,
-                      institute_id=institute_id)
-    Installment.insert(new)
-    query = session.query(Student).filter_by(
-        institute_id=institute_id).all()
-    students = [record.students() for record in query]
-    for stu in students:
-        student_instal = Student_Installment(installment_id=new.id, student_id=stu['id'],
-                                             institute_id=stu['institute_id'])
-        Student_Installment.insert(student_instal)
-    return {"success": True}
+    try:
+        new = Installment(name=name, date=date,
+                          institute_id=institute_id)
+        Installment.insert(new)
+        query = session.query(Student).filter_by(
+            institute_id=institute_id).all()
+        students = [record.students() for record in query]
+        for stu in students:
+            student_instal = Student_Installment(installment_id=new.id, student_id=stu['id'],
+                                                 institute_id=stu['institute_id'])
+            Student_Installment.insert(student_instal)
+        return {"success": True}
+    except:
+        raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To change installment
 @router.patch('/installment')
 def patch_installment(name: str, institute_id: int, date: str, _id: int):
-    new = session.query(Installment).get(_id)
-    new.name = name
-    new.date = date
-    new.institute_id = institute_id
-    Installment.update(new)
-    return {"success": True}
+    try:
+        new = session.query(Installment).get(_id)
+        new.name = name
+        new.date = date
+        new.institute_id = institute_id
+        Installment.update(new)
+        return {"success": True}
+    except:
+        raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To insert student Installment
 
 @router.post("/student-installment")
 def student_installment(student_id: int, install_id: int, received: int, institute_id):
-    new = Student_Installment(
-        student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
-    Student_Installment.insert(new)
-    return {
-        "success": True
-    }
+    try:
+        new = Student_Installment(
+            student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
+        Student_Installment.insert(new)
+        return {
+            "success": True
+        }
+    except:
+        raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To change student installment
 @router.patch('/student-installment')
 def patch_student_installment(student_id: int, receive: int, installment_id: int, institute_id: int,
                               _id: int):
-    new = session.query(Student_Installment).get(_id)
-    new.student_id = student_id
-    new.installment_id = installment_id
-    new.receive = receive
-    new.institute_id = institute_id
-    Student_Installment.update(new)
-    return {
-        "success": True
-    }
+    try:
+        new = session.query(Student_Installment).get(_id)
+        new.student_id = student_id
+        new.installment_id = installment_id
+        new.receive = receive
+        new.institute_id = institute_id
+        Student_Installment.update(new)
+        return {
+            "success": True
+        }
+    except:
+        raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To get students installments bulky
@@ -296,81 +341,94 @@ def patch_student_installment(student_id: int, receive: int, installment_id: int
 
 @router.get("/student-install")
 def student_install():
-    query = session.query(Student).join(Installment,
-                                        Installment.id == Student_Installment.installment_id).join(
-        Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
-                                                                          Student.id ==
-                                                                          Student_Installment.student_id).all()
-    query2 = session.query(Installment).join(Institute, Institute.id == Installment.institute_id)
-    result = {'students': [record.students() for record in query],
-              "installments": [record.installment() for record in query2.all()]}
+    try:
+        query = session.query(Student).join(Installment,
+                                            Installment.id == Student_Installment.installment_id).join(
+            Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
+                                                                              Student.id ==
+                                                                              Student_Installment.student_id).all()
+        query2 = session.query(Installment).join(Institute, Institute.id == Installment.institute_id)
+        result = {'students': [record.students() for record in query],
+                  "installments": [record.installment() for record in query2.all()]}
 
-    for stu in result["students"]:
-        query = session.query(Student_Installment).filter_by(
-            student_id=stu['id']).all()
-        dicto = {}
-        newlist = []
-        stu['installment_received'] = {}
-        for record in [record1.received() for record1 in query]:
-            dicto.update({"id": record['id'],
-                          "received": record['received'],
-                          "installment_id": record['installment_id']})
-            newlist.append(dicto)
+        for stu in result["students"]:
+            query = session.query(Student_Installment).filter_by(
+                student_id=stu['id']).all()
             dicto = {}
+            newlist = []
+            stu['installment_received'] = {}
+            for record in [record1.received() for record1 in query]:
+                dicto.update({"id": record['id'],
+                              "received": record['received'],
+                              "installment_id": record['installment_id']})
+                newlist.append(dicto)
+                dicto = {}
 
-        stu['installment_received'] = newlist
+            stu['installment_received'] = newlist
 
-    return result
+        return result
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # To get student installments by id student
 @router.get('/student-install-bid')
 def get_student_installment(student_id):
-    query2 = session.query(Student).filter_by(id=student_id)
-    result = {'students': [record.students() for record in query2]}
-    for stu in result["students"]:
-        query = session.query(Student_Installment).filter_by(
-            student_id=stu['id']).all()
-        dicto = {}
-        newlist = []
-        stu['installment_received'] = {}
-        for record in [record1.received() for record1 in query]:
-            dicto.update({"id": record['id'],
-                          "received": record['received'],
-                          "installment_id": record['installment_id']})
-            newlist.append(dicto)
+    try:
+        query2 = session.query(Student).filter_by(id=student_id)
+        result = {'students': [record.students() for record in query2]}
+        for stu in result["students"]:
+            query = session.query(Student_Installment).filter_by(
+                student_id=stu['id']).all()
             dicto = {}
+            newlist = []
+            stu['installment_received'] = {}
+            for record in [record1.received() for record1 in query]:
+                dicto.update({"id": record['id'],
+                              "received": record['received'],
+                              "installment_id": record['installment_id']})
+                newlist.append(dicto)
+                dicto = {}
 
-        stu['installment_received'] = newlist
-    return result
+            stu['installment_received'] = newlist
+        return result
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # get students installments by institute id
 @router.get("/student-install-institute-bid")
 def student_installments_by_institute_id(institute_id):
-    query2 = session.query(Student).filter_by(institute_id=institute_id)
-    result = {'students': [record.students() for record in query2]}
-    for stu in result["students"]:
-        query = session.query(Student_Installment).filter_by(
-            student_id=stu['id']).all()
-        dicto = {}
-        newlist = []
-        stu['installment_received'] = {}
-        for record in [record1.received() for record1 in query]:
-            dicto.update({"id": record['id'],
-                          "received": record['received'],
-                          "installment_id": record['installment_id']})
-            newlist.append(dicto)
+    try:
+        query2 = session.query(Student).filter_by(institute_id=institute_id)
+        result = {'students': [record.students() for record in query2]}
+        for stu in result["students"]:
+            query = session.query(Student_Installment).filter_by(
+                student_id=stu['id']).all()
             dicto = {}
-        stu['installment_received'] = newlist
-    return result
+            newlist = []
+            stu['installment_received'] = {}
+            for record in [record1.received() for record1 in query]:
+                dicto.update({"id": record['id'],
+                              "received": record['received'],
+                              "installment_id": record['installment_id']})
+                newlist.append(dicto)
+                dicto = {}
+            stu['installment_received'] = newlist
+        return result
+    except:
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # To get institutes
 @router.get('/students-form')
 def students_form():
-    institutes = session.query(Institute).all()
-    form = {
-        "institutes": [record.format() for record in institutes]
-    }
-    return form
+    try:
+        institutes = session.query(Institute).all()
+        form = {
+            "institutes": [record.format() for record in institutes]
+        }
+        return form
+    except:
+        raise StarletteHTTPException(404, "Not Found")
+
