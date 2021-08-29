@@ -12,19 +12,24 @@ router = APIRouter()
 @router.post('/attendance')
 def post_attendance(date, institute_id):
     try:
+        if date != "":
+            query = session.query(Attendance).filter_by(date=date).all()
+            if query == None:
+                new = Attendance(date=date,
+                                 institute_id=institute_id)
+                Attendance.insert(new)
+                query = session.query(Student).filter_by(
+                    institute_id=institute_id).all()
+                for stu in [qu.students() for qu in query]:
+                    new_attend = Student_Attendance(
+                        student_id=stu['id'], attendance_id=new.id)
+                    Student_Attendance.insert(new_attend)
+            return {
+                "success": True
+            }
+        else:
+            raise StarletteHTTPException(402, "Include Date")
 
-        new = Attendance(date=date,
-                         institute_id=institute_id)
-        Attendance.insert(new)
-        query = session.query(Student).filter_by(
-            institute_id=institute_id).all()
-        for stu in [qu.students() for qu in query]:
-            new_attend = Student_Attendance(
-                student_id=stu['id'], attendance_id=new.id)
-            Student_Attendance.insert(new_attend)
-        return {
-            "success": True
-        }
     except:
         raise StarletteHTTPException(500, "internal Server Error")
 
@@ -94,31 +99,35 @@ def students_attendance(student_attendance_id: int, attended: int):
 # To start students Attendance counting
 
 @router.get('/attendance-start')
-def attendance_start(student_id: int):
+def attendance_start(student_id):
     try:
-        query = session.query(Student).get(student_id)
-        student = query.format()
+        student = session.query(Student).get(student_id).format()
+
         total_absence = session.query(Student_Attendance).filter_by(
-            student_id=student_id, attended=0)
-        incremental = session.query(Student_Attendance).join(Attendance).filter(
-            Student_Attendance.student_id == student_id)
-        student_attendance_id = incremental.order_by(
+            student_id=student_id, attended=0).count()
+
+        incremental_absence = session.query(Student_Attendance).join(Attendance).filter(
+            Student_Attendance.student_id == student_id).order_by(Attendance.date).all()
+
+        student_attendance_id = session.query(Student_Attendance).join(Attendance).filter(
+            Student_Attendance.student_id == student_id).order_by(
             desc(Attendance.date)).limit(1)
+
         student_attendance_id = [record.format()
                                  for record in student_attendance_id]
-        incremental_absence = incremental.order_by(Attendance.date).all()
+        student.update(
+            {"student_attendance_id": student_attendance_id[0]['id']})
+
         attend = [record.format() for record in incremental_absence]
+        attend.pop(-1)
+
         incrementally_absence = 0
-        absence_list = []
-        student.update({"student_attendance_id": student_attendance_id[0]['id']})
         for record in attend:
             if record['attended'] == 0:
-                absence_list.append(0)
-            elif record['attended'] == 1 and absence_list[-1] == 0:
-                absence_list.append(1)
                 incrementally_absence += 1
-            else:
-                break
+            elif record['attended'] == 1:
+                incrementally_absence = 0
+
         installments = session.query(Student_Installment).join(Installment).filter(Student_Installment.student_id
                                                                                    == student_id).all()
         installments_list = [student.student() for student in installments]
@@ -127,10 +136,10 @@ def attendance_start(student_id: int):
         for record in installments_list:
             stu.update(
                 {'installment_name': record['install_name'], "received": record["received"],
-                 "installment_id": record["installment_id"]})
+                    "installment_id": record["installment_id"]})
             finalist.append(stu)
             stu = {}
-        student.update({"total_absence": total_absence.count()})
+        student.update({"total_absence": total_absence})
         student.update({"incrementally_absence": incrementally_absence})
         student.update({"installments": finalist})
         return student
