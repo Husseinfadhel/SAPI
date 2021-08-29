@@ -49,7 +49,7 @@ class Student(Operation):
     phone = Column(Integer, nullable=True)
     qr = Column(String, unique=True, nullable=True)
     note = Column(String, nullable=True)
-    picture = Column(String, nullable=True)
+    photo = Column(String, nullable=True)
     institute_id = Column(Integer, ForeignKey("Institute.id"))
     installment = relationship(
         "Student_Installment", backref="Student", lazy="dynamic")
@@ -64,7 +64,7 @@ class Student(Operation):
             "phone": self.phone,
             "qr": self.qr,
             "note": self.note,
-            "photo": self.picture,
+            "photo": self.photo,
             "institute_id": self.institute_id,
             "institute": self.Institute.name
         }
