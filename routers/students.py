@@ -1,4 +1,6 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query
+from starlette.responses import StreamingResponse
+
 from models import session, Institute, Student, Student_Installment, Installment
 from typing import Optional
 import qrcode
@@ -250,8 +252,12 @@ def get_photo(student_id):
         query = session.query(Student).filter_by(id=student_id).all()
         stu = [record.format() for record in query]
         image_path = stu[0]['photo']
-        image = FileResponse(image_path)
-        return image
+        img = Image.open(image_path)
+        buf = BytesIO()
+        img.save(buf, 'JPEG')
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="image/jpeg")
+
     except:
         raise StarletteHTTPException(404, "Not Found")
 
@@ -262,8 +268,12 @@ def get_qr(student_id):
         query = session.query(Student).filter_by(id=student_id).all()
         stu = [record.format() for record in query]
         qr_path = stu[0]['qr']
-        qr = FileResponse(qr_path)
-        return qr
+        img = Image.open(qr_path)
+        buf = BytesIO()
+        img.save(buf, 'png')
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="image/png")
+
     except:
         raise StarletteHTTPException(404, "Not Found")
 
@@ -431,4 +441,3 @@ def students_form():
         return form
     except:
         raise StarletteHTTPException(404, "Not Found")
-
