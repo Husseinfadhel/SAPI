@@ -13,8 +13,10 @@ router = APIRouter()
 def post_attendance(date, institute_id):
     try:
         if date != "":
-            query = session.query(Attendance).filter_by(date=date).all()
-            if query == None:
+            query = session.query(Attendance).filter_by(
+                date=date, institute_id=institute_id).all()
+
+            if query == []:
                 new = Attendance(date=date,
                                  institute_id=institute_id)
                 Attendance.insert(new)
@@ -89,6 +91,7 @@ def students_attendance(student_attendance_id: int, attended: int):
         query = session.query(Student).get(new.student_id)
         return {
             "success": True,
+            "student_id": new.student_id,
             "student_attendance_id": student_attendance_id,
             "student_name": query.name
         }
