@@ -34,7 +34,7 @@ def qr_gen(id_num, name, institute):
     img = qrcode.make(id_num + "|" + "besmarty")
     draw = ImageDraw.Draw(img)
     font = ImageFont.truetype('arial.ttf', 20)
-    draw.text((150, 250), name, font=font, align="right")
+    draw.text((125, 250), name, font=font, align="left")
     my_path = get_path()
     imagname = '{}-{}.png'.format(id_num, arabic)
     my_path = my_path + '/qr/' + institute + '/' + imagname
@@ -357,7 +357,8 @@ def student_install():
             Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
                                                                               Student.id ==
                                                                               Student_Installment.student_id).all()
-        query2 = session.query(Installment).join(Institute, Institute.id == Installment.institute_id)
+        query2 = session.query(Installment).join(
+            Institute, Institute.id == Installment.institute_id)
         result = {'students': [record.students() for record in query],
                   "installments": [record.installment() for record in query2.all()]}
 
