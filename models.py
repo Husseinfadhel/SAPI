@@ -35,8 +35,9 @@ class Users(Operation):
 
     def format(self):
         return {
-            "user": self.username,
-            "pass": self.password,
+            "id": self.id,
+            "username": self.username,
+            "password": self.password,
             "name": self.name
         }
 

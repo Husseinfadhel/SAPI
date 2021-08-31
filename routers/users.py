@@ -25,7 +25,7 @@ def login(username: str, password: int):
     try:
         query = session.query(Users).all()
         for record in [user.format() for user in query]:
-            if record['user'] == username and record['pass'] == password:
+            if record['username'] == username and record['password'] == password:
                 return {
                     "success": True,
                     "token": randrange(999999999, 1000000000000000),
