@@ -13,7 +13,8 @@ def register(username, password, name):
         new = Users(username=username, password=password, name=name)
         Users.insert(new)
         return {
-            "success": True
+            "success": True,
+            "id": new.id
         }
     except:
         raise StarletteHTTPException(500, "internal Server Error")
@@ -29,7 +30,10 @@ def login(username: str, password: int):
                 return {
                     "success": True,
                     "token": randrange(999999999, 1000000000000000),
-                    "name": record['name']
+                    "id": record["id"],
+                    "name": record['name'],
+                    "username": record['username'],
+                    "password": record['password']
                 }
             else:
                 break
@@ -51,9 +55,9 @@ def users():
 
 # to modify user
 @router.patch('/user')
-def user(_id, name, username, password):
+def user(user_id, name, username, password):
     try:
-        query = session.query(Users).get(_id)
+        query = session.query(Users).get(user_id)
         query.name = name
         query.username = username
         query.password = password
