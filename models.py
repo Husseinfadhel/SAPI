@@ -31,14 +31,14 @@ class Users(Operation):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     username = Column(String, unique=True)
-    password = Column(Integer, unique=True)
+    password = Column(Integer)
 
     def format(self):
         return {
             "id": self.id,
+            "name": self.name,
             "username": self.username,
             "password": self.password,
-            "name": self.name
         }
 
 

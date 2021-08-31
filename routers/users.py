@@ -14,7 +14,6 @@ def register(username, password, name):
         Users.insert(new)
         return {
             "success": True,
-            "id": new.id
         }
     except:
         raise StarletteHTTPException(500, "internal Server Error")
