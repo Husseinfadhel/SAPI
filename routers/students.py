@@ -169,20 +169,18 @@ def post_student(name: str = Query("name"),
 
 # to change student info
 @router.patch('/student')
-def student(_id, name: str, dob, institute_id, photo, note: Optional[str] = "لا يوجد"):
+def student(student_id, name: str, dob, institute_id, note: Optional[str] = "لا يوجد"):
     try:
-        query = session.query(Student).get(_id)
-        print(query)
+        query = session.query(Student).get(student_id)
         query.name = name
         query.dob = dob
         query.institute_id = institute_id
         query.note = note
-        query.photo = photo
         os.remove(query.qr)
         institute = session.query(Institute).filter_by(id=institute_id).all()
         for record in institute:
             institute_name = record.format()['name']
-        new = qr_gen(_id, name, institute_name)
+        new = qr_gen(student_id, name, institute_name)
         query.qr = new['qrpath']
         return {
             'success': True
