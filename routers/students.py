@@ -330,14 +330,11 @@ def student_installment(student_id: int, install_id: int, received: int, institu
 
 # To change student installment
 @router.patch('/student-installment')
-def patch_student_installment(student_id: int, receive: int, installment_id: int, institute_id: int,
-                              _id: int):
+def patch_student_installment(student_installment_id: int, receive: int
+                              ):
     try:
-        new = session.query(Student_Installment).get(_id)
-        new.student_id = student_id
-        new.installment_id = installment_id
+        new = session.query(Student_Installment).get(student_installment_id)
         new.receive = receive
-        new.institute_id = institute_id
         Student_Installment.update(new)
         return {
             "success": True
