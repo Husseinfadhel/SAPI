@@ -260,6 +260,25 @@ def get_photo(student_id):
         raise StarletteHTTPException(404, "Not Found")
 
 
+# To change student's photo
+
+@router.patch('/photo')
+def patch_photo(student_id: int, photo: bytes = File("photo")):
+    try:
+        photo = BytesIO(photo)
+        stud = session.query(Student).get(student_id)
+        institute = session.query(Institute).get(stud.institute_id)
+        os.remove(stud.photo)
+        save = photo_save(photo, student_id, stud.name, institute.name)
+        stud.photo = save['image_path']
+        Student.update(stud)
+        return {
+            'success': True
+        }
+    except:
+        raise StarletteHTTPException(500, "internal Server Error")
+
+
 @router.get('/qr')
 def get_qr(student_id):
     try:

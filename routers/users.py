@@ -8,7 +8,7 @@ router = APIRouter()
 
 # register a new user
 @router.post('/register')
-def register(username, password, name):
+def register(username: str, password: int, name: str):
     try:
         new = Users(username=username, password=password, name=name)
         Users.insert(new)
