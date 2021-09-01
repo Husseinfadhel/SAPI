@@ -23,19 +23,17 @@ def register(username, password, name):
 @router.post('/login')
 def login(username: str, password: int):
     try:
-        query = session.query(Users).all()
-        for record in [user.format() for user in query]:
-            if record['username'] == username and record['password'] == password:
-                return {
-                    "success": True,
-                    "token": randrange(999999999, 1000000000000000),
-                    "id": record["id"],
-                    "name": record['name'],
-                    "username": record['username'],
-                    "password": record['password']
-                }
-            else:
-                break
+        query = session.query(Users).filter_by(username=username).all()
+        record = [user.format() for user in query][0]
+        if record['username'] == username and record['password'] == password:
+            return {
+                "success": True,
+                "token": randrange(999999999, 1000000000000000),
+                "id": record["id"],
+                "name": record['name'],
+                "username": record['username'],
+                "password": record['password']
+            }
     except:
         raise StarletteHTTPException(401, "Unauthorized")
 
