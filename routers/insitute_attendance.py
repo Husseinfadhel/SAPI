@@ -131,8 +131,11 @@ def attendance_start(student_id):
             elif record['attended'] == 1:
                 incrementally_absence = 0
 
+        attendance_date = session.query(Attendance).get(
+            student_attendance_id[0]['attendance_id'])
+
         installments = session.query(Student_Installment).join(Installment).filter(Student_Installment.student_id
-                                                                                   == student_id).all()
+                                                                                   == student_id, attendance_date.date >= Installment.date).all()
         installments_list = [student.student() for student in installments]
         finalist = []
         stu = {}
