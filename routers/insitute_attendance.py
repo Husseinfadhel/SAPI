@@ -107,7 +107,7 @@ def attendance_start(student_id):
         student = session.query(Student).get(student_id).format()
 
         total_absence = session.query(Student_Attendance).filter_by(
-            student_id=student_id, attended=0).count()
+            student_id=student_id, attended=0).count() - 1
 
         incremental_absence = session.query(Student_Attendance).join(Attendance).filter(
             Student_Attendance.student_id == student_id).order_by(Attendance.date).all()
