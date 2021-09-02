@@ -138,7 +138,7 @@ def post_student(name: str = Query("name"),
                  institute_id: int = Query("institute_id"),
                  phone: Optional[int] = Query("phone"),
                  note: Optional[str] = Query("note"),
-                 photo: bytes = File("photo")):
+                 photo: Optional[bytes] = File("photo")):
     try:
         newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone,
                              note=note)
