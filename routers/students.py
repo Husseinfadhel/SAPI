@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query
 from starlette.responses import StreamingResponse
 
-from models import session, Institute, Student, Student_Installment, Installment
+from models import session, Institute, Student, Student_Installment, Installment, Attendance, Student_Attendance
 from typing import Optional
 import qrcode
 from PIL import ImageDraw, ImageFont, Image
@@ -149,6 +149,11 @@ def post_student(name: str = Query("name"),
         institute_name = institute.name
 
         query = session.query(Student).get(newstudent.id)
+        attendance = session.query(Attendance).all()
+        attendance_id = [_id.format()['id'] for _id in attendance]
+        for _id in attendance_id:
+            new = Student_Attendance(student_id=newstudent.id, attendance_id=_id)
+            Student_Attendance.insert(new)
         photo = BytesIO(photo)
         image = photo_save(photo, query.id, query.name,
                            institute_name)
@@ -169,13 +174,14 @@ def post_student(name: str = Query("name"),
 
 # to change student info
 @router.patch('/student')
-def student(student_id, name: str, dob, institute_id, note: Optional[str] = "لا يوجد"):
+def student(student_id, name: str, dob, institute_id, ban: int = 0, note: Optional[str] = "لا يوجد"):
     try:
         query = session.query(Student).get(student_id)
         query.name = name
         query.dob = dob
         query.institute_id = institute_id
         query.note = note
+        query.banned = ban
         os.remove(query.qr)
         institute = session.query(Institute).filter_by(id=institute_id).all()
         for record in institute:
@@ -184,6 +190,20 @@ def student(student_id, name: str, dob, institute_id, note: Optional[str] = "ل�
         query.qr = new['qrpath']
         return {
             'success': True
+        }
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
+
+
+# To change ban state of student
+@router.patch('/banned')
+def banned(student_id: int, ban: int = 0):
+    try:
+        stud = session.query(Student).get(student_id)
+        stud.banned = ban
+        Student.update(stud)
+        return {
+            "success": True
         }
     except:
         raise StarletteHTTPException(500, "Internal Server Error")

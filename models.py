@@ -51,6 +51,7 @@ class Student(Operation):
     qr = Column(String, unique=True, nullable=True)
     note = Column(String, nullable=True)
     photo = Column(String, nullable=True)
+    banned = Column(Integer, default=0)
     institute_id = Column(Integer, ForeignKey("Institute.id"))
     installment = relationship(
         "Student_Installment", backref="Student", lazy="dynamic")
@@ -67,7 +68,8 @@ class Student(Operation):
             "note": self.note,
             "photo": self.photo,
             "institute_id": self.institute_id,
-            "institute": self.Institute.name
+            "institute": self.Institute.name,
+            "banned": self.banned
         }
 
     def students(self):
