@@ -4,6 +4,7 @@ from models import session, engine, Base
 from routers import students, insitute_attendance, users
 from fastapi.responses import PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+import uvicorn
 
 Base.metadata.create_all(engine)
 
@@ -35,3 +36,6 @@ def create_app(test_config=None):
 
 
 app = create_app()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
