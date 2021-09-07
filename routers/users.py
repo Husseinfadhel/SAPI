@@ -8,9 +8,9 @@ router = APIRouter()
 
 # register a new user
 @router.post('/register')
-def register(username: str, password: int, name: str):
+def register(username: str, password: int, name: str, auth: int):
     try:
-        new = Users(username=username, password=password, name=name)
+        new = Users(username=username, password=password, name=name, auth=auth)
         Users.insert(new)
         return {
             "success": True,
@@ -32,7 +32,8 @@ def login(username: str, password: int):
                 "id": record["id"],
                 "name": record['name'],
                 "username": record['username'],
-                "password": record['password']
+                "password": record['password'],
+                "auth": record["auth"]
             }
     except:
         raise StarletteHTTPException(401, "Unauthorized")
@@ -52,12 +53,13 @@ def users():
 
 # to modify user
 @router.patch('/user')
-def user(user_id, name, username, password):
+def user(user_id: int, name: str, username: str, password: int, auth: int):
     try:
         query = session.query(Users).get(user_id)
         query.name = name
         query.username = username
         query.password = password
+        query.auth = auth
         Users.update(query)
         return {
             "success": True

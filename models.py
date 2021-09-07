@@ -32,6 +32,7 @@ class Users(Operation):
     name = Column(String)
     username = Column(String, unique=True)
     password = Column(Integer)
+    auth = Column(Integer)
 
     def format(self):
         return {
@@ -39,6 +40,7 @@ class Users(Operation):
             "name": self.name,
             "username": self.username,
             "password": self.password,
+            "auth": self.auth
         }
 
 
