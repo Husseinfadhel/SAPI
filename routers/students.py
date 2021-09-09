@@ -175,7 +175,8 @@ def post_student(name: str = Query("name"),
 
 # to change student info
 @router.patch('/student')
-def student(student_id, name: str, dob, institute_id, ban: int = 0, note: Optional[str] = "لا يوجد"):
+def student(student_id, name: str, dob, institute_id, ban: int = 0, qr: Optional[str] = '0',
+            note: Optional[str] = "لا يوجد "):
     try:
         query = session.query(Student).get(student_id)
         query.name = name
@@ -183,12 +184,28 @@ def student(student_id, name: str, dob, institute_id, ban: int = 0, note: Option
         query.institute_id = institute_id
         query.note = note
         query.banned = ban
+        if 0 not in qr:
+            query.qr = qr
         os.remove(query.qr)
         institute = session.query(Institute).filter_by(id=institute_id).all()
         for record in institute:
             institute_name = record.format()['name']
         new = qr_gen(student_id, name, institute_name)
         query.qr = new['qrpath']
+        return {
+            'success': True
+        }
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
+
+
+# To change Qrpath
+@router.patch('/qr')
+def qr(student_id, qr: str):
+    try:
+        query = session.query(Student).get(student_id)
+        query.qr = qr
+        Student.update(query)
         return {
             'success': True
         }
