@@ -11,7 +11,7 @@ router = APIRouter()
 # insert Attendance
 @router.post('/attendance')
 def post_attendance(date, institute_id):
-   # try:
+    try:
         if date != "":
             query = session.query(Attendance).filter_by(
                 date=date, institute_id=institute_id).all()
@@ -25,15 +25,16 @@ def post_attendance(date, institute_id):
                 for stu in query:
                     new_attend = Student_Attendance(
                         student_id=stu.id, attendance_id=new.id)
-                    Student_Attendance.insert(new_attend)
+                    session.add(new_attend)
+                Student_Attendance.insert(new_attend)
             return {
                 "success": True
             }
         else:
             raise StarletteHTTPException(402, "Include Date")
 
-    #except:
-       # raise StarletteHTTPException(500, "internal Server Error")
+    except:
+        raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To change attendance
