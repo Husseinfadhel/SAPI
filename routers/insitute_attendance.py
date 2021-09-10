@@ -4,6 +4,7 @@ from models import session, engine, Base, Institute, Student, Attendance, Studen
     Installment
 from sqlalchemy import desc
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from typing import Optional
 
 router = APIRouter()
 
@@ -85,11 +86,12 @@ def students_attendance_institute():
 
 # To change Student Attendance
 @router.patch('/students-attendance')
-def students_attendance(student_attendance_id: int, attended: int, time: str):
+def students_attendance(student_attendance_id: int, attended: int, time: Optional[str] = None):
     try:
         new = session.query(Student_Attendance).get(student_attendance_id)
         new.attended = attended
-        new.time = time
+        if time is not None:
+            new.time = time
         Student_Attendance.update(new)
         query = session.query(Student).get(new.student_id)
         return {
