@@ -9,7 +9,7 @@ Hey there 👋,
 Student Management System Fastapi
 
 ## To using alembic for db migration
-be sure to modify env.py file
+be sure to modify env.py file then:
 
 ``` alembic init alembic```,
 
