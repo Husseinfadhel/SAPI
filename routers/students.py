@@ -175,7 +175,7 @@ def post_student(name: str = Query("name"),
 
 # to change student info
 @router.patch('/student')
-def student(student_id, name: str, dob, institute_id, ban: int = 0, qr: Optional[str] = '0',
+def student(student_id, name: str, dob, institute_id, ban: int = 0,
             note: Optional[str] = "لا يوجد "):
     try:
         query = session.query(Student).get(student_id)
@@ -184,8 +184,6 @@ def student(student_id, name: str, dob, institute_id, ban: int = 0, qr: Optional
         query.institute_id = institute_id
         query.note = note
         query.banned = ban
-        if 0 not in qr:
-            query.qr = qr
         os.remove(query.qr)
         institute = session.query(Institute).filter_by(id=institute_id).all()
         for record in institute:
