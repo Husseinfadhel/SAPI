@@ -126,6 +126,7 @@ class Student_Attendance(Operation):
     student_id = Column(Integer, ForeignKey("Student.id"))
     attendance_id = Column(Integer, ForeignKey("Attendance.id"))
     attended = Column(Integer, default=0)
+    time = Column(String, nullable=True)
 
     def format(self):
         return {
@@ -134,7 +135,8 @@ class Student_Attendance(Operation):
             "attendance_id": self.attendance_id,
             "student_name": self.Student.name,
             "attended": self.attended,
-            "date": self.Attendance.date
+            "date": self.Attendance.date,
+            "time": self.time
         }
 
 

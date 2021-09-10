@@ -71,6 +71,7 @@ def students_attendance_institute():
                 new_attend['student_attendance_id'] = attend['id']
                 new_attend['attended'] = attend['attended']
                 new_attend['attendance_id'] = attend['attendance_id']
+                new_attend['time'] = attend['time']
                 enlist.append(new_attend)
                 new_attend = {}
             stu.update({"student_attendance": enlist})
@@ -83,10 +84,11 @@ def students_attendance_institute():
 
 # To change Student Attendance
 @router.patch('/students-attendance')
-def students_attendance(student_attendance_id: int, attended: int):
+def students_attendance(student_attendance_id: int, attended: int, time: str):
     try:
         new = session.query(Student_Attendance).get(student_attendance_id)
         new.attended = attended
+        new.time = time
         Student_Attendance.update(new)
         query = session.query(Student).get(new.student_id)
         return {
