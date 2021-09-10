@@ -26,7 +26,7 @@ def post_attendance(date, institute_id):
                     new_attend = Student_Attendance(
                         student_id=stu.id, attendance_id=new.id)
                     session.add(new_attend)
-                Student_Attendance.insert(new_attend)
+                session.commit()
             return {
                 "success": True
             }
