@@ -22,10 +22,11 @@ def post_attendance(date, institute_id):
                 Attendance.insert(new)
                 query = session.query(Student).filter_by(
                     institute_id=institute_id).all()
-                for stu in [qu.students() for qu in query]:
+                for stu in query:
                     new_attend = Student_Attendance(
-                        student_id=stu['id'], attendance_id=new.id)
-                    Student_Attendance.insert(new_attend)
+                        student_id=stu.id, attendance_id=new.id)
+                    session.add(new_attend)
+                Student_Attendance.insert(new_attend)
             return {
                 "success": True
             }

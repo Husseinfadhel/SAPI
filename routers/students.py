@@ -153,7 +153,8 @@ def post_student(name: str = Query("name"),
         attendance_id = [_id.format()['id'] for _id in attendance]
         for _id in attendance_id:
             new = Student_Attendance(student_id=newstudent.id, attendance_id=_id)
-            Student_Attendance.insert(new)
+            session.add(new)
+        session.commit()
         if photo is not None:
             photo = BytesIO(photo)
             image = photo_save(photo, query.id, query.name,
@@ -167,7 +168,8 @@ def post_student(name: str = Query("name"),
         for _ in installment:
             new_install = Student_Installment(student_id=query.id, institute_id=institute_id,
                                               installment_id=_.format()['id'])
-            Student_Installment.insert(new_install)
+            session.add(new_install)
+        session.commit()
         return {"success": True}, 200
     except:
         raise StarletteHTTPException(500, "Internal Server Error")
@@ -346,7 +348,8 @@ def post_installment(name: str, date: str, institute_id: int):
         for stu in students:
             student_instal = Student_Installment(installment_id=new.id, student_id=stu['id'],
                                                  institute_id=stu['institute_id'])
-            Student_Installment.insert(student_instal)
+            session.add(student_instal)
+        session.commit()
         return {"success": True}
     except:
         raise StarletteHTTPException(500, "internal Server Error")
