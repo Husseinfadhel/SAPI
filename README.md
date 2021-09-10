@@ -10,8 +10,11 @@ Student Management System Fastapi
 
 ## To using alembic for db migration
 be sure to modify env.py file
+
 ``` alembic init alembic```,
+
 ``` alembic revision --autogenerate -m "first"```,
+
 ``` alembic upgrade head```,
 
 ## To package for installation use this command
