@@ -55,9 +55,9 @@ def patch_attendance(_id: int, date: str, institute_id: int):
 
 # get student attendance bulky
 @router.get('/students-attendance')
-def students_attendance_institute():
+def students_attendance():
     try:
-        query = session.query(Student).filter_by().all()
+        query = session.query(Student).all()
         students = [record.students() for record in query]
         query2 = session.query(Attendance).all()
         paternalist = {"students": students,
@@ -82,6 +82,33 @@ def students_attendance_institute():
         return paternalist
     except:
         raise StarletteHTTPException(404, "Not Found")
+
+
+# get student attendance by institute id
+@router.get('/students-attendance-institute-bid')
+def students_attendance_institute(institute_id: int):
+    query = session.query(Student).filter_by(institute_id=institute_id).all()
+    students = [record.students() for record in query]
+    query2 = session.query(Attendance).filter_by(institute_id=institute_id).all()
+    paternalist = {"students": students,
+                   "attendance": [record.format() for record in query2]
+                   }
+    new_attend = {}
+    enlist = []
+    for stu in students:
+        attendance = session.query(Student_Attendance).filter_by(
+            student_id=stu['id']).all()
+        for attend in [att.format() for att in attendance]:
+            new_attend['student_attendance_id'] = attend['id']
+            new_attend['attended'] = attend['attended']
+            new_attend['attendance_id'] = attend['attendance_id']
+            new_attend['time'] = attend['time']
+            enlist.append(new_attend)
+            new_attend = {}
+        stu.update({"student_attendance": enlist})
+        enlist = []
+
+    return paternalist
 
 
 # To change Student Attendance
@@ -140,14 +167,15 @@ def attendance_start(student_id):
             student_attendance_id[0]['attendance_id'])
 
         installments = session.query(Student_Installment).join(Installment).filter(Student_Installment.student_id
-                                                                                   == student_id, attendance_date.date >= Installment.date).all()
+                                                                                   == student_id,
+                                                                                   attendance_date.date >= Installment.date).all()
         installments_list = [student.student() for student in installments]
         finalist = []
         stu = {}
         for record in installments_list:
             stu.update(
                 {'installment_name': record['install_name'], "received": record["received"],
-                    "installment_id": record["installment_id"]})
+                 "installment_id": record["installment_id"]})
             finalist.append(stu)
             stu = {}
         student.update({"total_absence": total_absence})
