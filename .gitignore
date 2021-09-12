@@ -12,3 +12,6 @@ build
 dist
 
 path.py
+
+alembic
+alembic.ini

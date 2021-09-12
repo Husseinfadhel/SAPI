@@ -152,7 +152,8 @@ def post_student(name: str = Query("name"),
         attendance = session.query(Attendance).all()
         attendance_id = [_id.format()['id'] for _id in attendance]
         for _id in attendance_id:
-            new = Student_Attendance(student_id=newstudent.id, attendance_id=_id)
+            new = Student_Attendance(
+                student_id=newstudent.id, attendance_id=_id)
             session.add(new)
         session.commit()
         if photo is not None:
@@ -277,6 +278,15 @@ def students():
         query = session.query(Student).all()
         stu = [record.format() for record in query]
         return stu
+    except:
+        raise StarletteHTTPException(404, "Not Found")
+
+
+# get students bulky
+@router.get('/student')
+def get_student(student_id: int):
+    try:
+        return session.query(Student).get(student_id).format()
     except:
         raise StarletteHTTPException(404, "Not Found")
 
@@ -440,7 +450,8 @@ def student_install():
 def get_student_installment(student_id):
     try:
         query2 = session.query(Student).filter_by(id=student_id)
-        query = session.query(Installment).filter_by(institute_id=query2.first().institute_id).all()
+        query = session.query(Installment).filter_by(
+            institute_id=query2.first().institute_id).all()
         result = {'students': [record.students() for record in query2],
                   "installments": [record.installment() for record in query]}
         for stu in result["students"]:
@@ -460,7 +471,7 @@ def get_student_installment(student_id):
         return result
     except:
 
-         raise StarletteHTTPException(404, "Not Found")
+        raise StarletteHTTPException(404, "Not Found")
 
 
 # get students installments by institute id
