@@ -440,7 +440,9 @@ def student_install():
 def get_student_installment(student_id):
     try:
         query2 = session.query(Student).filter_by(id=student_id)
-        result = {'students': [record.students() for record in query2]}
+        query = session.query(Installment).filter_by(institute_id=query2.first().institute_id).all()
+        result = {'students': [record.students() for record in query2],
+                  "installments": [record.installment() for record in query]}
         for stu in result["students"]:
             query = session.query(Student_Installment).filter_by(
                 student_id=stu['id']).all()
@@ -457,7 +459,8 @@ def get_student_installment(student_id):
             stu['installment_received'] = newlist
         return result
     except:
-        raise StarletteHTTPException(404, "Not Found")
+
+         raise StarletteHTTPException(404, "Not Found")
 
 
 # get students installments by institute id
