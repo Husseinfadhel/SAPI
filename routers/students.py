@@ -178,8 +178,8 @@ def post_student(name: str = Query("name"),
 
 # to change student info
 @router.patch('/student')
-def student(student_id, name: str, dob, institute_id, ban: int = 0,
-            note: Optional[str] = "لا يوجد "):
+def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
+                  note: Optional[str] = "لا يوجد "):
     try:
         query = session.query(Student).get(student_id)
         query.name = name
@@ -202,14 +202,13 @@ def student(student_id, name: str, dob, institute_id, ban: int = 0,
 
 # Delete student by ID
 @router.delete('/student')
-def student(student_id: int):
+def delete_student(student_id: int):
     try:
         query = session.query(Student).get(student_id)
         if query.photo is not None:
             os.remove(query.photo)
         os.remove(query.qr)
-        session.delete(query)
-        session.commit()
+        Student.delete(query)
         return {
             'success': True
 

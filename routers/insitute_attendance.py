@@ -89,7 +89,8 @@ def students_attendance():
 def students_attendance_institute(institute_id: int):
     query = session.query(Student).filter_by(institute_id=institute_id).all()
     students = [record.students() for record in query]
-    query2 = session.query(Attendance).filter_by(institute_id=institute_id).all()
+    query2 = session.query(Attendance).filter_by(
+        institute_id=institute_id).all()
     paternalist = {"students": students,
                    "attendance": [record.format() for record in query2]
                    }
@@ -113,7 +114,7 @@ def students_attendance_institute(institute_id: int):
 
 # To change Student Attendance
 @router.patch('/students-attendance')
-def students_attendance(student_attendance_id: int, attended: int, time: Optional[str] = None):
+def patch_students_attendance(student_attendance_id: int, attended: int, time: Optional[str] = None):
     try:
         new = session.query(Student_Attendance).get(student_attendance_id)
         new.attended = attended

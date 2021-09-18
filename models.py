@@ -20,7 +20,7 @@ class Operation(Base):
 
     def delete(self):
         session.delete(self)
-        session.commit(self)
+        session.commit()
 
     def update(self):
         session.commit()
