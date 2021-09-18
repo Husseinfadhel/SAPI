@@ -200,6 +200,21 @@ def student(student_id, name: str, dob, institute_id, ban: int = 0,
         raise StarletteHTTPException(500, "Internal Server Error")
 
 
+# Delete student by ID
+@router.delete('/student')
+def student(student_id: int):
+    try:
+        query = session.query(Student).get(student_id)
+        session.delete(query)
+        session.commit()
+        return {
+            'success': True
+
+        }
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
+
+
 # To change Qrpath
 @router.patch('/qr')
 def qr(student_id, qr: str):
