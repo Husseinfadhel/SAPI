@@ -205,6 +205,9 @@ def student(student_id, name: str, dob, institute_id, ban: int = 0,
 def student(student_id: int):
     try:
         query = session.query(Student).get(student_id)
+        if query.photo is not None:
+            os.remove(query.photo)
+        os.remove(query.qr)
         session.delete(query)
         session.commit()
         return {
@@ -310,9 +313,8 @@ def get_student(student_id: int):
 @router.get('/photo')
 def get_photo(student_id):
     try:
-        query = session.query(Student).filter_by(id=student_id).all()
-        stu = [record.format() for record in query]
-        image_path = stu[0]['photo']
+        query = session.query(Student).get(student_id)
+        image_path = query.photo
         img = Image.open(image_path)
         buf = BytesIO()
         img.save(buf, 'JPEG')
@@ -331,7 +333,8 @@ def patch_photo(student_id: int, photo: bytes = File("photo")):
         photo = BytesIO(photo)
         stud = session.query(Student).get(student_id)
         institute = session.query(Institute).get(stud.institute_id)
-        os.remove(stud.photo)
+        if stud.photo is not None:
+            os.remove(stud.photo)
         save = photo_save(photo, student_id, stud.name, institute.name)
         stud.photo = save['image_path']
         Student.update(stud)
