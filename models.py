@@ -56,9 +56,9 @@ class Student(Operation):
     banned = Column(Integer, default=0)
     institute_id = Column(Integer, ForeignKey("Institute.id"))
     installment = relationship(
-        "Student_Installment", backref="Student", lazy="dynamic")
+        "Student_Installment", backref="Student", lazy="dynamic", cascade="all, delete")
     attendance = relationship("Student_Attendance",
-                              backref="Student", lazy="dynamic")
+                              backref="Student", lazy="dynamic", cascade="all, delete")
 
     def format(self):
         return {
