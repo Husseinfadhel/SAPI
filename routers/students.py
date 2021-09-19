@@ -17,11 +17,11 @@ router = APIRouter()
 
 
 # Function to get correct path optimized with windows directory
-def get_path():
-    path = pathlib.Path('.')
-    full_path = path.absolute()
-    my_path = full_path.as_posix()
-    return my_path
+# def get_path():
+#     path = pathlib.Path('.')
+#     full_path = path.absolute()
+#     my_path = full_path.as_posix()
+#     return my_path
 
 
 # Function to generate qr image with student id and name embedded in it
@@ -35,9 +35,8 @@ def qr_gen(id_num, name, institute):
     draw = ImageDraw.Draw(img)
     font = ImageFont.truetype('arial.ttf', 20)
     draw.text((125, 250), name, font=font, align="left")
-    my_path = get_path()
     imagname = '{}-{}.png'.format(id_num, arabic)
-    my_path = my_path + '/qr/' + institute + '/' + imagname
+    my_path = './qr/' + institute + '/' + imagname
     img.save(my_path, 'PNG')
     return {
         "qrpath": my_path
@@ -47,9 +46,8 @@ def qr_gen(id_num, name, institute):
 
 def photo_save(photo, _id, name, institute):
     img = Image.open(photo)
-    my_path = get_path()
     image = '{}-{}.jpg'.format(_id, name)
-    my_path = my_path + '/images/' + institute + '/' + image
+    my_path = './images/' + institute + '/' + image
     img.save(my_path, 'JPEG')
     return {
         "image_path": my_path
@@ -85,16 +83,15 @@ def main_admin():
 def post_institute(name: str):
     try:
         new = Institute(name=name)
+        if 'qr' not in os.listdir("./"):
+            os.makedirs('./qr')
+        if 'images' not in os.listdir("./"):
+            os.makedirs('./images')
+        if name not in os.listdir('./qr'):
+            os.makedirs('./qr/' + name)
+        if name not in os.listdir('./images'):
+            os.makedirs('./images/' + name)
         Institute.insert(new)
-        my_path = get_path()
-        if 'qr' not in os.listdir(my_path):
-            os.makedirs(my_path + '/qr')
-        if 'images' not in os.listdir(my_path):
-            os.makedirs(my_path + '/images')
-        if name not in os.listdir(my_path + '/qr'):
-            os.makedirs(my_path + '/qr/' + name)
-        if name not in os.listdir(my_path + '/images'):
-            os.makedirs(my_path + '/images/' + name)
         return {"success": True}
     except:
         raise StarletteHTTPException(500, "Internal Server Error")
@@ -187,7 +184,6 @@ def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
         query.institute_id = institute_id
         query.note = note
         query.banned = ban
-        os.remove(query.qr)
         institute = session.query(Institute).filter_by(id=institute_id).all()
         for record in institute:
             institute_name = record.format()['name']
@@ -207,7 +203,8 @@ def delete_student(student_id: int):
         query = session.query(Student).get(student_id)
         if query.photo is not None:
             os.remove(query.photo)
-        os.remove(query.qr)
+        if os.path.exists(query.qr):
+            os.remove(query.qr)
         Student.delete(query)
         return {
             'success': True
