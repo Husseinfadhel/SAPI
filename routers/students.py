@@ -7,7 +7,8 @@ import qrcode
 from PIL import ImageDraw, ImageFont, Image
 import arabic_reshaper
 from bidi.algorithm import get_display
-import pathlib
+from sqlalchemy import desc
+
 import os
 from io import BytesIO
 from fastapi.responses import FileResponse
@@ -71,9 +72,21 @@ def main_admin():
         for institute in result["institutes"]:
             student_count = students.join(
                 Institute, Student.institute_id == Institute.id).filter(institute["id"] == Student.institute_id).count()
+            attendance = session.query(Attendance).filter_by(institute_id=institute["id"]).order_by(
+                desc(Attendance.date)).limit(1).all()
+            attendance = [att for att in attendance]
 
             institute.update({'students_institute_count': student_count})
+            if attendance:
+                attendance = attendance.pop()
+                daily_attendance = session.query(Student_Attendance).filter_by(attendance_id=attendance.id,
+                                                                               attended=1).count()
+                institute.update({'daily_attendance': daily_attendance})
+            else:
+                institute.update({'daily_attendance': 0})
         return result
+
+
     except:
         raise StarletteHTTPException(404, "Not Found")
 
@@ -510,6 +523,19 @@ def student_installments_by_institute_id(institute_id):
         return result
     except:
         raise StarletteHTTPException(404, "Not Found")
+
+
+# To change student installment bulky by installment_id
+@router.patch('/student-install-bid')
+def student_installments_by_install_id(installment_id: int):
+    query = session.query(Student_Installment).filter_by(installment_id=installment_id).all()
+    for record in query:
+        record.receive = 1
+        session.add(record)
+    session.commit()
+    return {
+        "success": True
+    }
 
 
 # To get institutes
