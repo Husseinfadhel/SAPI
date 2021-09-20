@@ -86,7 +86,6 @@ def main_admin():
                 institute.update({'daily_attendance': 0})
         return result
 
-
     except:
         raise StarletteHTTPException(404, "Not Found")
 
@@ -528,7 +527,8 @@ def student_installments_by_institute_id(institute_id):
 # To change student installment bulky by installment_id
 @router.patch('/student-install-bid')
 def student_installments_by_install_id(installment_id: int):
-    query = session.query(Student_Installment).filter_by(installment_id=installment_id).all()
+    query = session.query(Student_Installment).filter_by(
+        installment_id=installment_id).all()
     for record in query:
         record.receive = 1
         session.add(record)
