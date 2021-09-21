@@ -158,13 +158,6 @@ def post_student(name: str = Query("name"),
         institute_name = institute.name
 
         query = session.query(Student).get(newstudent.id)
-        attendance = session.query(Attendance).all()
-        attendance_id = [_id.format()['id'] for _id in attendance]
-        for _id in attendance_id:
-            new = Student_Attendance(
-                student_id=newstudent.id, attendance_id=_id)
-            session.add(new)
-        session.commit()
         if photo is not None:
             photo = BytesIO(photo)
             image = photo_save(photo, query.id, query.name,
