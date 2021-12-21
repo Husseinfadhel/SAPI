@@ -29,5 +29,5 @@ SQLAlchemy==1.4.22
 starlette==0.14.2
 toml==0.10.2
 typing-extensions==3.10.0.0
-uvicorn==0.14.0
+uvicorn==0.16.0
 wrapt==1.12.1
