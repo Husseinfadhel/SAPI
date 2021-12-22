@@ -125,6 +125,7 @@ def get_institute():
 def patch_institute(institute_id: int, name: str):
     try:
         new = session.query(Institute).get(institute_id)
+        os.rename("./qr/"+new.name, "./qr/"+name)
         new.name = name
         Institute.update(new)
         return {"success": True}
