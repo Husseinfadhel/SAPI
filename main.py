@@ -5,6 +5,7 @@ from routers import students, insitute_attendance, users
 from fastapi.responses import PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
+import os
 
 Base.metadata.create_all(engine)
 
@@ -36,6 +37,14 @@ def create_app(test_config=None):
 
 
 app = create_app()
+
+
+@app.on_event('shutdown')
+async def shut():
+    # service = app.state.service
+    # service.restart()
+    os.system('python restart.py')
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
