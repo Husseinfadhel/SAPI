@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, \
     Student_Installment, \
     Installment
@@ -53,17 +53,26 @@ def patch_attendance(_id: int, date: str, institute_id: int):
         raise StarletteHTTPException(500, "internal Server Error")
 
 
-# get student attendance bulky
+# get student attendance bulky with pagination
 @router.get('/students-attendance')
-def students_attendance():
+def students_attendance(number_of_students: int = 100, page: int = 1):
     try:
-        query = session.query(Student).all()
+        count_students = session.query(Student).count()
+        query = session.query(Student).limit(number_of_students).offset((page - 1) * number_of_students)
         students = [record.students() for record in query]
         query2 = session.query(Attendance).all()
+        if count_students <= number_of_students:
+            pages = 1
+        else:
+            pages = int(round(count_students / number_of_students))
+
         paternalist = {"students": students,
-                       "attendance": [record.format() for record in query2]
+                       "attendance": [record.format() for record in query2],
+                       "total_pages": pages,
+                       "total_students": count_students
 
                        }
+
         new_attend = {}
         enlist = []
         for stu in students:
@@ -78,7 +87,6 @@ def students_attendance():
                 new_attend = {}
             stu.update({"student_attendance": enlist})
             enlist = []
-
         return paternalist
     except:
         raise StarletteHTTPException(404, "Not Found")
