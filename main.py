@@ -6,6 +6,7 @@ from fastapi.responses import PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
 import os
+
 Base.metadata.create_all(engine)
 
 
@@ -37,7 +38,6 @@ def create_app(test_config=None):
 app = create_app()
 
 
-
 @app.on_event('shutdown')
 async def shut():
     # service = app.state.service
@@ -46,5 +46,5 @@ async def shut():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level='info', log_config='log.ini')
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level='info', log_config='log.ini', workers=4)
     # uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)

@@ -1,6 +1,5 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query, Depends
 from starlette.responses import StreamingResponse
-
 from models import session, Institute, Student, Student_Installment, Installment, Attendance, Student_Attendance
 from typing import Optional
 import qrcode
@@ -8,7 +7,6 @@ from PIL import ImageDraw, ImageFont, Image
 import arabic_reshaper
 from bidi.algorithm import get_display
 from sqlalchemy import desc
-
 import os
 from io import BytesIO
 from fastapi.responses import FileResponse
@@ -125,7 +123,7 @@ def get_institute():
 def patch_institute(institute_id: int, name: str):
     try:
         new = session.query(Institute).get(institute_id)
-        os.rename("./qr/"+new.name, "./qr/"+name)
+        os.rename("./qr/" + new.name, "./qr/" + name)
         new.name = name
         Institute.update(new)
         return {"success": True}
@@ -261,28 +259,90 @@ def banned(student_id: int, ban: int = 0):
 
 # To get students info by institute
 @router.get("/student-info")
-def student_info(institute_id):
+def student_info(institute_id, number_of_students: int = 100, page: int = 1, search: str = None):
     try:
-        student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-            Student.institute_id == institute_id).all()
+        if search is None:
+            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id).count()
+            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset((page - 1) * number_of_students
+                                                                                       )
 
-        students = [stu.format() for stu in student_join]
+            students = [stu.format() for stu in student_join]
+            if count <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count / number_of_students))
+            return {"students": students,
+                    "total_pages": pages,
+                    "total_students": count,
+                    "page": page
 
-        return students
+                    }
+        else:
+            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
+            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(Student.name).limit(
+                number_of_students).offset((page - 1) * number_of_students)
+
+            students = [stu.format() for stu in student_join]
+            if count <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count / number_of_students))
+            return {"students": students,
+                    "total_pages": pages,
+                    "total_students": count,
+                    "page": page
+
+                    }
+
     except:
         raise StarletteHTTPException(404, "Not Found")
 
 
 # To get students by institute
 @router.get("/students-institute")
-def student_institute(institute_id):
+def student_institute(institute_id, number_of_students: int = 100, page: int = 1, search: str = None):
     try:
-        student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-            Student.institute_id == institute_id).all()
+        if search is None:
+            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id).count()
+            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset((page - 1) * number_of_students)
 
-        students = [stu.format() for stu in student_join]
+            students = [stu.format() for stu in student_join]
+            if count <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count / number_of_students))
+            return {"students": students,
+                    "total_pages": pages,
+                    "total_students": count,
+                    "page": page
 
-        return students
+                    }
+        else:
+            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
+            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(Student.name
+                                                                                                         ).limit(
+                number_of_students).offset((page - 1) * number_of_students)
+
+            students = [stu.format() for stu in student_join]
+            if count <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count / number_of_students))
+            return {"students": students,
+                    "total_pages": pages,
+                    "total_students": count,
+                    "page": page
+
+                    }
+
     except:
         raise StarletteHTTPException(404, "Not Found")
 
@@ -304,16 +364,29 @@ def install_student(student_id, install_id):
 
 # get students bulky
 @router.get('/students')
-def students():
+def students(number_of_students: int = 100, page: int = 1, search: str = None):
     try:
-        query = session.query(Student).all()
+        if search is None:
+            count = session.query(Student).count()
+            query = session.query(Student).order_by(Student.name).limit(number_of_students).offset((page - 1) * number_of_students)
+        else:
+            count = session.query(Student).filter(Student.name.like('%{}%'.format(search))).count()
+            query = session.query(Student).filter(Student.name.like('%{}%'.format(search))).order_by(Student.name).limit(number_of_students).offset((page - 1) * number_of_students)
         stu = [record.format() for record in query]
-        return stu
+        if count <= number_of_students:
+            pages = 1
+        else:
+            pages = int(round(count / number_of_students))
+        return {"students": stu,
+                "total_pages": pages,
+                "total_students": count,
+                "page": page
+                }
     except:
         raise StarletteHTTPException(404, "Not Found")
 
 
-# get students bulky
+# get students by id
 @router.get('/student')
 def get_student(student_id: int):
     try:
@@ -507,9 +580,15 @@ def get_student_installment(student_id):
 
 # get students installments by institute id
 @router.get("/student-install-institute-bid")
-def student_installments_by_institute_id(institute_id):
+def student_installments_by_institute_id(institute_id, number_of_students: int = 100, page: int = 1):
     try:
-        query2 = session.query(Student).filter_by(institute_id=institute_id)
+        count = session.query(Student).filter_by(institute_id=institute_id).count()
+        query2 = session.query(Student).filter_by(institute_id=institute_id).limit(number_of_students).offset(
+            (page - 1) * number_of_students)
+        if count <= number_of_students:
+            pages = 1
+        else:
+            pages = int(round(count / number_of_students))
         result = {'students': [record.students() for record in query2]}
         for stu in result["students"]:
             query = session.query(Student_Installment).filter_by(
@@ -524,7 +603,11 @@ def student_installments_by_institute_id(institute_id):
                 newlist.append(dicto)
                 dicto = {}
             stu['installment_received'] = newlist
-        return result
+        return {"students": result,
+                "total_pages": pages,
+                "total_students": count,
+                "page": page
+                }
     except:
         raise StarletteHTTPException(404, "Not Found")
 
