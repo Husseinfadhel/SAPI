@@ -531,11 +531,11 @@ def patch_student_installment(student_installment_id: int, receive: int
         raise StarletteHTTPException(500, "internal Server Error")
 
 
-# To get students installments bulky
+# To get students installments bulky or by institute id
 
 
 @router.get("/student-install")
-def student_install(number_of_students: int = 100, page: int = 1, search: str = None):
+def student_install(number_of_students: int = 100, page: int = 1, search: str = None, institute_id: int = None):
     try:
         query = session.query(Student).join(Installment,
                                             Installment.id == Student_Installment.installment_id).join(
@@ -544,7 +544,30 @@ def student_install(number_of_students: int = 100, page: int = 1, search: str = 
                                                                               Student_Installment.student_id).limit(
             number_of_students).offset(
             (page - 1) * number_of_students)
-        if search is not None:
+        query2 = session.query(Installment).join(
+            Institute, Institute.id == Installment.institute_id)
+        if institute_id is not None:
+            query = session.query(Student).join(Installment,
+                                                Installment.id == Student_Installment.installment_id).join(
+                Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
+                                                                                  Student.id ==
+                                                                                  Student_Installment.student_id).filter(
+                Student.institute_id == institute_id).limit(
+                number_of_students).offset(
+                (page - 1) * number_of_students)
+            query2 = session.query(Installment).join(
+                Institute, Institute.id == Installment.institute_id).filter(Installment.institute_id == institute_id)
+            if search is not None:
+                query = session.query(Student).join(Installment,
+                                                    Installment.id == Student_Installment.installment_id).join(
+                    Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
+                                                                                      Student.id ==
+                                                                                      Student_Installment.student_id).filter(
+                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).limit(
+                    number_of_students).offset(
+                    (page - 1) * number_of_students)
+
+        if search is not None and institute_id is None:
             query = session.query(Student).join(Installment,
                                                 Installment.id == Student_Installment.installment_id).join(
                 Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
@@ -553,8 +576,7 @@ def student_install(number_of_students: int = 100, page: int = 1, search: str = 
                 Student.name.like('%{}%'.format(search))).limit(
                 number_of_students).offset(
                 (page - 1) * number_of_students)
-        query2 = session.query(Installment).join(
-            Institute, Institute.id == Installment.institute_id)
+
         result = {'students': [record.students() for record in query],
                   "installments": [record.installment() for record in query2.all()]}
 
@@ -608,37 +630,37 @@ def get_student_installment(student_id):
 
 
 # get students installments by institute id
-@router.get("/student-install-institute-bid")
-def student_installments_by_institute_id(institute_id, number_of_students: int = 100, page: int = 1):
-    try:
-        count = session.query(Student).filter_by(institute_id=institute_id).count()
-        query2 = session.query(Student).filter_by(institute_id=institute_id).limit(number_of_students).offset(
-            (page - 1) * number_of_students)
-        if count <= number_of_students:
-            pages = 1
-        else:
-            pages = int(round(count / number_of_students))
-        result = {'students': [record.students() for record in query2]}
-        for stu in result["students"]:
-            query = session.query(Student_Installment).filter_by(
-                student_id=stu['id']).all()
-            dicto = {}
-            newlist = []
-            stu['installment_received'] = {}
-            for record in [record1.received() for record1 in query]:
-                dicto.update({"id": record['id'],
-                              "received": record['received'],
-                              "installment_id": record['installment_id']})
-                newlist.append(dicto)
-                dicto = {}
-            stu['installment_received'] = newlist
-        return {"students": result,
-                "total_pages": pages,
-                "total_students": count,
-                "page": page
-                }
-    except:
-        raise StarletteHTTPException(404, "Not Found")
+# @router.get("/student-install-institute-bid")
+# def student_installments_by_institute_id(institute_id, number_of_students: int = 100, page: int = 1):
+#     try:
+#         count = session.query(Student).filter_by(institute_id=institute_id).count()
+#         query2 = session.query(Student).filter_by(institute_id=institute_id).limit(number_of_students).offset(
+#             (page - 1) * number_of_students)
+#         if count <= number_of_students:
+#             pages = 1
+#         else:
+#             pages = int(round(count / number_of_students))
+#         result = {'students': [record.students() for record in query2]}
+#         for stu in result["students"]:
+#             query = session.query(Student_Installment).filter_by(
+#                 student_id=stu['id']).all()
+#             dicto = {}
+#             newlist = []
+#             stu['installment_received'] = {}
+#             for record in [record1.received() for record1 in query]:
+#                 dicto.update({"id": record['id'],
+#                               "received": record['received'],
+#                               "installment_id": record['installment_id']})
+#                 newlist.append(dicto)
+#                 dicto = {}
+#             stu['installment_received'] = newlist
+#         return {"students": result,
+#                 "total_pages": pages,
+#                 "total_students": count,
+#                 "page": page
+#                 }
+#     except:
+#         raise StarletteHTTPException(404, "Not Found")
 
 
 # To change student installment bulky by installment_id
