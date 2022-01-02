@@ -258,7 +258,7 @@ def banned(student_id: int, ban: int = 0):
 
 
 # To get students info by institute
-@router.get("/student-info")
+@router.get("/students")
 def student_info(institute_id: int = None, number_of_students: int = 100, page: int = 1, search: str = None):
     try:
         if institute_id is not None:
@@ -379,29 +379,29 @@ def install_student(student_id, install_id):
 
 
 # get students bulky
-@router.get('/students')
-def students(number_of_students: int = 100, page: int = 1, search: str = None):
-    try:
-        if search is None:
-            count = session.query(Student).count()
-            query = session.query(Student).order_by(Student.name).limit(number_of_students).offset(
-                (page - 1) * number_of_students)
-        else:
-            count = session.query(Student).filter(Student.name.like('%{}%'.format(search))).count()
-            query = session.query(Student).filter(Student.name.like('%{}%'.format(search))).order_by(
-                Student.name).limit(number_of_students).offset((page - 1) * number_of_students)
-        stu = [record.format() for record in query]
-        if count <= number_of_students:
-            pages = 1
-        else:
-            pages = int(round(count / number_of_students))
-        return {"students": stu,
-                "total_pages": pages,
-                "total_students": count,
-                "page": page
-                }
-    except:
-        raise StarletteHTTPException(404, "Not Found")
+# @router.get('/students')
+# def students(number_of_students: int = 100, page: int = 1, search: str = None):
+#     try:
+#         if search is None:
+#             count = session.query(Student).count()
+#             query = session.query(Student).order_by(Student.name).limit(number_of_students).offset(
+#                 (page - 1) * number_of_students)
+#         else:
+#             count = session.query(Student).filter(Student.name.like('%{}%'.format(search))).count()
+#             query = session.query(Student).filter(Student.name.like('%{}%'.format(search))).order_by(
+#                 Student.name).limit(number_of_students).offset((page - 1) * number_of_students)
+#         stu = [record.format() for record in query]
+#         if count <= number_of_students:
+#             pages = 1
+#         else:
+#             pages = int(round(count / number_of_students))
+#         return {"students": stu,
+#                 "total_pages": pages,
+#                 "total_students": count,
+#                 "page": page
+#                 }
+#     except:
+#         raise StarletteHTTPException(404, "Not Found")
 
 
 # get students by id
