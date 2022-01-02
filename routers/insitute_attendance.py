@@ -77,6 +77,7 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                 number_of_students).offset(
                 (page - 1) * number_of_students)
             count_students = session.query(Student).filter_by(institute_id=institute_id).count()
+            query2 = session.query(Attendance).filter(Attendance.institute_id == institute_id).all()
         if search_type is not None:
             if search_type == 1 and institute_id is not None:  # search by student name
                 query = session.query(Student).filter(Student.institute_id == institute_id,
@@ -96,7 +97,8 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                     query = session.query(Student).filter(Student.institute_id == institute_id).order_by(Student.name).limit(
                         number_of_students).offset((page - 1) * number_of_students)
                     count_students = session.query(Student).filter(Student.institute_id == institute_id).count()
-                    query2 = session.query(Attendance).filter(Attendance.date == search1).all()
+                    query2 = session.query(Attendance).filter(Attendance.date == search1, Attendance.institute_id ==
+                                                              institute_id).all()
                 elif search2 is None and institute_id is None:
                     query = session.query(Student).order_by(Student.name).limit(
                         number_of_students).offset((page - 1) * number_of_students)
@@ -108,7 +110,7 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = session.query(Student).filter(Student.institute_id == institute_id).count()
                         query2 = session.query(Attendance).filter(and_(Attendance.date >= search1,
-                                                                       Attendance.date <= search2)).all()
+                                                                       Attendance.date <= search2), Attendance.institute_id == institute_id).all()
                     else:
                         query = session.query(Student).order_by(Student.name).limit(
                             number_of_students).offset((page - 1) * number_of_students)

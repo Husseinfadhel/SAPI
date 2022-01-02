@@ -259,15 +259,24 @@ def banned(student_id: int, ban: int = 0):
 
 # To get students info by institute
 @router.get("/student-info")
-def student_info(institute_id, number_of_students: int = 100, page: int = 1, search: str = None):
+def student_info(institute_id: int = None, number_of_students: int = 100, page: int = 1, search: str = None):
     try:
-        if search is None:
-            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id).count()
-            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset(
-                (page - 1) * number_of_students
+        if institute_id is not None:
+            if search is None:
+                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                    Student.institute_id == institute_id).count()
+                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                    Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset(
+                    (page - 1) * number_of_students
                 )
+            else:
+                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
+                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(
+                    Student.name).limit(
+                    number_of_students).offset((page - 1) * number_of_students)
+
 
             students = [stu.format() for stu in student_join]
             if count <= number_of_students:
@@ -281,12 +290,16 @@ def student_info(institute_id, number_of_students: int = 100, page: int = 1, sea
 
                     }
         else:
-            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
-            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(
-                Student.name).limit(
-                number_of_students).offset((page - 1) * number_of_students)
+            if search is not None:
+                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.name.like('%{}%'.format(search))).count()
+                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.name.like('%{}%'.format(search))).order_by(
+                    Student.name).limit(
+                    number_of_students).offset((page - 1) * number_of_students)
+            else:
+                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).count()
+                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).order_by(
+                    Student.name).limit(
+                    number_of_students).offset((page - 1) * number_of_students)
 
             students = [stu.format() for stu in student_join]
             if count <= number_of_students:
@@ -305,49 +318,49 @@ def student_info(institute_id, number_of_students: int = 100, page: int = 1, sea
 
 
 # To get students by institute
-@router.get("/students-institute")
-def student_institute(institute_id, number_of_students: int = 100, page: int = 1, search: str = None):
-    try:
-        if search is None:
-            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id).count()
-            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset(
-                (page - 1) * number_of_students)
-
-            students = [stu.format() for stu in student_join]
-            if count <= number_of_students:
-                pages = 1
-            else:
-                pages = int(round(count / number_of_students))
-            return {"students": students,
-                    "total_pages": pages,
-                    "total_students": count,
-                    "page": page
-
-                    }
-        else:
-            count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
-            student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(Student.name
-                                                                                                         ).limit(
-                number_of_students).offset((page - 1) * number_of_students)
-
-            students = [stu.format() for stu in student_join]
-            if count <= number_of_students:
-                pages = 1
-            else:
-                pages = int(round(count / number_of_students))
-            return {"students": students,
-                    "total_pages": pages,
-                    "total_students": count,
-                    "page": page
-
-                    }
-
-    except:
-        raise StarletteHTTPException(404, "Not Found")
+# @router.get("/students-institute")
+# def student_institute(institute_id, number_of_students: int = 100, page: int = 1, search: str = None):
+#     try:
+#         if search is None:
+#             count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+#                 Student.institute_id == institute_id).count()
+#             student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+#                 Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset(
+#                 (page - 1) * number_of_students)
+#
+#             students = [stu.format() for stu in student_join]
+#             if count <= number_of_students:
+#                 pages = 1
+#             else:
+#                 pages = int(round(count / number_of_students))
+#             return {"students": students,
+#                     "total_pages": pages,
+#                     "total_students": count,
+#                     "page": page
+#
+#                     }
+#         else:
+#             count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+#                 Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
+#             student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
+#                 Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(Student.name
+#                                                                                                          ).limit(
+#                 number_of_students).offset((page - 1) * number_of_students)
+#
+#             students = [stu.format() for stu in student_join]
+#             if count <= number_of_students:
+#                 pages = 1
+#             else:
+#                 pages = int(round(count / number_of_students))
+#             return {"students": students,
+#                     "total_pages": pages,
+#                     "total_students": count,
+#                     "page": page
+#
+#                     }
+#
+#     except:
+#         raise StarletteHTTPException(404, "Not Found")
 
 
 # to get installment of students by student id and install id
