@@ -1,3 +1,5 @@
+import signal
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from models import session, engine, Base
@@ -5,6 +7,7 @@ from routers import students, insitute_attendance, users
 from fastapi.responses import PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
+from multiprocessing import Process
 import os
 
 Base.metadata.create_all(engine)
@@ -38,13 +41,17 @@ def create_app(test_config=None):
 app = create_app()
 
 
-@app.on_event('shutdown')
-async def shut():
-    # service = app.state.service
-    # service.restart()
-    os.system('python restart.py')
+# @app.on_event('shutdown')
+# async def shut():
+# service = app.state.service
+# service.restart()
+# os.system('python restart.py')
+
+@app.get('/shutdown')
+def shut():
+    pid = os.getpid()
+    os.kill(pid, signal.SIGTERM)
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level='info', log_config='log.ini', workers=4)
-    # uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)
