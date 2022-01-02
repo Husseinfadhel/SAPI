@@ -562,7 +562,8 @@ def student_install(number_of_students: int = 100, page: int = 1, search: str = 
                                                     Installment.id == Student_Installment.installment_id).join(
                     Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
                                                                                       Student.id ==
-                                                                                      Student_Installment.student_id).filter(
+                                                                                      Student_Installment.student_id
+                                                                                      ).filter(
                     Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).limit(
                     number_of_students).offset(
                     (page - 1) * number_of_students)

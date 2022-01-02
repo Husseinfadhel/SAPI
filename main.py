@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
 from multiprocessing import Process
 import os
+import psutil
 
 Base.metadata.create_all(engine)
 
@@ -50,8 +51,11 @@ app = create_app()
 @app.get('/shutdown')
 def shut():
     pid = os.getpid()
+    print(pid)
     os.kill(pid, signal.SIGTERM)
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, workers=4)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
+
+
