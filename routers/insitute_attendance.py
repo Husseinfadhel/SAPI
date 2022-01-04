@@ -9,10 +9,7 @@ from typing import Optional
 
 from datetime import datetime
 
-now = datetime.now()
 
-now_day = now.strftime('%Y-%m-%d')
-now_time = now.strftime("%H:%M")
 
 router = APIRouter()
 
@@ -21,6 +18,9 @@ router = APIRouter()
 @router.post('/attendance')
 def post_attendance(institute_id):
     try:
+        now = datetime.now()
+
+        now_day = now.strftime('%Y-%m-%d')
         if now_day != "":
             query = session.query(Attendance).filter_by(
                 date=now_day, institute_id=institute_id).all()
@@ -50,6 +50,10 @@ def post_attendance(institute_id):
 @router.patch('/attendance')
 def patch_attendance(_id: int, date: str, institute_id: int):
     try:
+        now = datetime.now()
+
+        now_day = now.strftime('%Y-%m-%d')
+        now_time = now.strftime("%H:%M")
         new = session.query(Attendance).get(_id)
         new.date = now_day
         new.institute_id = institute_id
@@ -202,10 +206,15 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
 @router.patch('/students-attendance')
 def patch_students_attendance(student_attendance_id: int, attended: int):
     try:
+        now = datetime.now()
+
+        now_day = now.strftime('%Y-%m-%d')
+        now_time = now.strftime("%H:%M")
         new = session.query(Student_Attendance).get(student_attendance_id)
         new.attended = attended
 
         new.time = now_time
+
         Student_Attendance.update(new)
         query = session.query(Student).get(new.student_id)
         return {
