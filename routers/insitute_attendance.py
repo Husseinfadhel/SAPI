@@ -9,24 +9,21 @@ from typing import Optional
 
 from datetime import datetime
 
-
-
 router = APIRouter()
 
 
 # insert Attendance
 @router.post('/attendance')
-def post_attendance(institute_id):
+def post_attendance(institute_id, date: str):
     try:
         now = datetime.now()
 
-        now_day = now.strftime('%Y-%m-%d')
-        if now_day != "":
+        if date != "":
             query = session.query(Attendance).filter_by(
-                date=now_day, institute_id=institute_id).all()
+                date=date, institute_id=institute_id).all()
 
             if query == []:
-                new = Attendance(date=now_day,
+                new = Attendance(date=date,
                                  institute_id=institute_id)
                 Attendance.insert(new)
                 query = session.query(Student).filter_by(
@@ -50,12 +47,9 @@ def post_attendance(institute_id):
 @router.patch('/attendance')
 def patch_attendance(_id: int, date: str, institute_id: int):
     try:
-        now = datetime.now()
 
-        now_day = now.strftime('%Y-%m-%d')
-        now_time = now.strftime("%H:%M")
         new = session.query(Attendance).get(_id)
-        new.date = now_day
+        new.date = date
         new.institute_id = institute_id
         Attendance.update(new)
         return {
@@ -98,7 +92,8 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                     Student.name.like('%{}%'.format(search1))).count()
             elif search_type == 2:  # search by two date or one
                 if search2 is None and institute_id is not None:
-                    query = session.query(Student).filter(Student.institute_id == institute_id).order_by(Student.name).limit(
+                    query = session.query(Student).filter(Student.institute_id == institute_id).order_by(
+                        Student.name).limit(
                         number_of_students).offset((page - 1) * number_of_students)
                     count_students = session.query(Student).filter(Student.institute_id == institute_id).count()
                     query2 = session.query(Attendance).filter(Attendance.date == search1, Attendance.institute_id ==
@@ -110,11 +105,13 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                     query2 = session.query(Attendance).filter(Attendance.date == search1).all()
                 else:
                     if institute_id is not None:
-                        query = session.query(Student).filter(Student.institute_id == institute_id).order_by(Student.name).limit(
+                        query = session.query(Student).filter(Student.institute_id == institute_id).order_by(
+                            Student.name).limit(
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = session.query(Student).filter(Student.institute_id == institute_id).count()
                         query2 = session.query(Attendance).filter(and_(Attendance.date >= search1,
-                                                                       Attendance.date <= search2), Attendance.institute_id == institute_id).all()
+                                                                       Attendance.date <= search2),
+                                                                  Attendance.institute_id == institute_id).all()
                     else:
                         query = session.query(Student).order_by(Student.name).limit(
                             number_of_students).offset((page - 1) * number_of_students)
@@ -208,7 +205,6 @@ def patch_students_attendance(student_attendance_id: int, attended: int):
     try:
         now = datetime.now()
 
-        now_day = now.strftime('%Y-%m-%d')
         now_time = now.strftime("%H:%M")
         new = session.query(Student_Attendance).get(student_attendance_id)
         new.attended = attended
