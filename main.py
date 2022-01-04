@@ -9,7 +9,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
 from multiprocessing import Process
 import os
-import psutil
 
 Base.metadata.create_all(engine)
 
