@@ -546,6 +546,7 @@ def student_install(number_of_students: int = 100, page: int = 1, search: str = 
             (page - 1) * number_of_students)
         query2 = session.query(Installment).join(
             Institute, Institute.id == Installment.institute_id)
+
         if institute_id is not None:
             query = session.query(Student).join(Installment,
                                                 Installment.id == Student_Installment.installment_id).join(
@@ -577,9 +578,17 @@ def student_install(number_of_students: int = 100, page: int = 1, search: str = 
                 Student.name.like('%{}%'.format(search))).limit(
                 number_of_students).offset(
                 (page - 1) * number_of_students)
-
+        count = query.count()
+        if count <= number_of_students:
+            pages = 1
+        else:
+            pages = int(round(count / number_of_students))
         result = {'students': [record.students() for record in query],
-                  "installments": [record.installment() for record in query2.all()]}
+                  "installments": [record.installment() for record in query2.all()],
+                  "page": page,
+                  "total_pages": pages,
+                  "total_students": count
+                  }
 
         for stu in result["students"]:
             query = session.query(Student_Installment).filter_by(
