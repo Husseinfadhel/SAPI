@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from models import session, engine, Base, Institute, Student, Attendance, Student_Attendance, \
     Student_Installment, \
     Installment
@@ -242,6 +242,10 @@ def attendance_start(student_id):
 
         student_attendance_id = [record.format()
                                  for record in student_attendance_id]
+        if student_attendance_id[0]['attended'] == 1:
+            return status.HTTP_403_FORBIDDEN
+
+
         student.update(
             {"student_attendance_id": student_attendance_id[0]['id']})
 
