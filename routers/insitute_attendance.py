@@ -64,6 +64,7 @@ def patch_attendance(_id: int, date: str, institute_id: int):
 def students_attendance(number_of_students: int = 100, page: int = 1, institute_id: int = None,
                         search_type: int = None, search1: str = None, search2: str = None):
     try:
+        n = 0
         query = None
         query2 = session.query(Attendance).all()
         count_students = session.query(Student).count()
@@ -122,15 +123,34 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
             attendance = session.query(Student_Attendance).filter(
                 and_(Student_Attendance.time >= search1,
                      Student_Attendance.time <= search2))
-            for n in attendance:
-                query = session.query(Student).filter(Student.id == n.student_id).order_by(Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
-                count_students = session.query(Student).filter(Student.id == n.student_id).count()
-        students = [record.students() for record in query]
-        if count_students <= number_of_students:
-            pages = 1
+            bulk_attend = [at.format() for at in attendance]
+            atten_student = set([stude['student_id'] for stude in bulk_attend])
+            atten_student = atten_student
+            n = 1
+            query = []
+            if len(atten_student) <= 50:
+                for cou in atten_student:
+                    min_query = session.query(Student).filter(Student.id == cou)
+                    query.extend([s.students() for s in min_query])
+            elif len(atten_student) > 50:
+                start = page - 1 * number_of_students
+                attended = atten_student[start:start + number_of_students]
+                for cou in attended:
+                    min_query = session.query(Student).filter(Student.id == cou)
+                    query.extend([s.students() for s in min_query])
+        if n == 1:
+            students = query
+            count_students = len(atten_student)
+            if count_students <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count_students / number_of_students))
         else:
-            pages = int(round(count_students / number_of_students))
+            students = [record.students() for record in query]
+            if count_students <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count_students / number_of_students))
 
         paternalist = {"students": students,
                        "attendance": [record.format() for record in query2],
@@ -244,7 +264,6 @@ def attendance_start(student_id):
                                  for record in student_attendance_id]
         if student_attendance_id[0]['attended'] == 1:
             return status.HTTP_403_FORBIDDEN
-
 
         student.update(
             {"student_attendance_id": student_attendance_id[0]['id']})
