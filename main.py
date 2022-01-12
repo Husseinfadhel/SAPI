@@ -51,7 +51,7 @@ app = create_app()
 def shut():
     pid = os.getpid()
     print(pid)
-    os.kill(pid, signal.SIGTERM)
+    os.kill(pid, signal.CTRL_C_EVENT)
 
 
 if __name__ == "__main__":
