@@ -123,16 +123,17 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
             attendance = session.query(Student_Attendance).filter(
                 and_(Student_Attendance.time >= search1,
                      Student_Attendance.time <= search2))
+
             bulk_attend = [at.format() for at in attendance]
             atten_student = set([stude['student_id'] for stude in bulk_attend])
             atten_student = atten_student
             n = 1
             query = []
-            if len(atten_student) <= 50:
+            if len(atten_student) <= 100:
                 for cou in atten_student:
                     min_query = session.query(Student).filter(Student.id == cou)
                     query.extend([s.students() for s in min_query])
-            elif len(atten_student) > 50:
+            elif len(atten_student) > 100:
                 start = page - 1 * number_of_students
                 attended = atten_student[start:start + number_of_students]
                 for cou in attended:
@@ -167,15 +168,29 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
             if search_type != 3:
                 attendance = session.query(Student_Attendance).filter_by(
                     student_id=stu['id']).all()
-            for attend in [att.format() for att in attendance]:
-                new_attend['student_attendance_id'] = attend['id']
-                new_attend['attended'] = attend['attended']
-                new_attend['attendance_id'] = attend['attendance_id']
-                new_attend['time'] = attend['time']
-                enlist.append(new_attend)
-                new_attend = {}
-            stu.update({"student_attendance": enlist})
-            enlist = []
+                for attend in [att.format() for att in attendance]:
+                    new_attend['student_attendance_id'] = attend['id']
+                    new_attend['attended'] = attend['attended']
+                    new_attend['attendance_id'] = attend['attendance_id']
+                    new_attend['time'] = attend['time']
+                    enlist.append(new_attend)
+                    new_attend = {}
+                stu.update({"student_attendance": enlist})
+                enlist = []
+            elif search_type == 3:
+                attendance = session.query(Student_Attendance).filter(Student_Attendance.student_id == stu['id'],
+                                                                      and_(Student_Attendance.time >= search1,
+                                                                           Student_Attendance.time <= search2))
+                for attend in [att.format() for att in attendance]:
+                    new_attend['student_attendance_id'] = attend['id']
+                    new_attend['attended'] = attend['attended']
+                    new_attend['attendance_id'] = attend['attendance_id']
+                    new_attend['time'] = attend['time']
+                    enlist.append(new_attend)
+                    new_attend = {}
+                stu.update({"student_attendance": enlist})
+                enlist = []
+
         return paternalist
     except:
         raise StarletteHTTPException(404, "Not Found")
