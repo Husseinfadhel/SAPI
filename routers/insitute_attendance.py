@@ -278,7 +278,7 @@ def attendance_start(student_id):
         student_attendance_id = [record.format()
                                  for record in student_attendance_id]
         if student_attendance_id[0]['attended'] == 1:
-            return status.HTTP_403_FORBIDDEN
+            raise StarletteHTTPException(401, "Unauthorized")
 
         student.update(
             {"student_attendance_id": student_attendance_id[0]['id']})
@@ -312,5 +312,8 @@ def attendance_start(student_id):
         student.update({"incrementally_absence": incrementally_absence})
         student.update({"installments": finalist})
         return student
-    except:
-        raise StarletteHTTPException(500, "internal Server Error")
+    except Exception as e:
+        if e.status_code == 401:
+            raise StarletteHTTPException(401, "Unauthorized")
+        else:
+            raise StarletteHTTPException(500, "internal Server Error")
