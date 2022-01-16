@@ -126,7 +126,7 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
 
             bulk_attend = [at.format() for at in attendance]
             atten_student = set([stude['student_id'] for stude in bulk_attend])
-            atten_student = atten_student
+            atten_student = list(atten_student)
             n = 1
             query = []
             if len(atten_student) <= 100:
