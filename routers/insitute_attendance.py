@@ -134,7 +134,7 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                     min_query = session.query(Student).filter(Student.id == cou)
                     query.extend([s.students() for s in min_query])
             elif len(atten_student) > 100:
-                start = page - 1 * number_of_students
+                start = (page - 1) * number_of_students
                 attended = atten_student[start:start + number_of_students]
                 for cou in attended:
                     min_query = session.query(Student).filter(Student.id == cou)
