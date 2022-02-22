@@ -81,6 +81,7 @@ class Student(Operation):
         return {
             "id": self.id,
             "name": self.name,
+            "banned": self.banned,
             "institute_id": self.Institute.id,
 
         }
