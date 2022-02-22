@@ -14,33 +14,51 @@ router = APIRouter()
 
 # insert Attendance
 @router.post('/attendance')
-def post_attendance(institute_id, date: str):
-    try:
-        now = datetime.now()
+async def post_attendance(institute_id, date: str):
+    # try:
+    now = datetime.now()
 
-        if date != "":
-            query = session.query(Attendance).filter_by(
-                date=date, institute_id=institute_id).all()
+    if date != "":
+        query = session.query(Attendance).filter_by(
+            date=date, institute_id=institute_id).all()
 
-            if query == []:
-                new = Attendance(date=date,
-                                 institute_id=institute_id)
-                Attendance.insert(new)
-                query = session.query(Student).filter_by(
-                    institute_id=institute_id).all()
-                for stu in query:
-                    new_attend = Student_Attendance(
-                        student_id=stu.id, attendance_id=new.id)
-                    session.add(new_attend)
-                session.commit()
-            return {
-                "success": True
-            }
-        else:
-            raise StarletteHTTPException(402, "Include Date")
+        if query == []:
+            new = Attendance(date=date,
+                                institute_id=institute_id)
+            Attendance.insert(new)
+            query = session.query(Student).filter_by(
+                institute_id=institute_id).all()
+            for stu in query:
+                new_attend = Student_Attendance(
+                    student_id=stu.id, attendance_id=new.id)
+                session.add(new_attend)
 
-    except:
-        raise StarletteHTTPException(500, "internal Server Error")
+                incremental_absence = session.query(Student_Attendance).join(Attendance).filter(
+                    Student_Attendance.student_id == stu.id).order_by(Attendance.date).all()
+
+                attend = [record.format() for record in incremental_absence]
+                attend.pop(-1)
+
+                incrementally_absence = 0
+                for record in attend:
+                    if record['attended'] == 0:
+                        incrementally_absence += 1
+                    elif record['attended'] == 1:
+                        incrementally_absence = 0
+                if incrementally_absence > 3:
+                    stud = session.query(Student).get(stu.id)
+                    stud.banned = 1
+                    Student.update(stud)
+
+            session.commit()
+        return {
+            "success": True
+        }
+    else:
+        raise StarletteHTTPException(402, "Include Date")
+
+    # except:
+    #     raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To change attendance
@@ -66,7 +84,7 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
     try:
         n = 0
         query = None
-        query2 = session.query(Attendance).all()
+        query2 = session.query(Attendance).order_by(Attendance.date.desc()).all()
         count_students = session.query(Student).count()
         if institute_id is None:
             query = session.query(Student).order_by(Student.name).limit(number_of_students).offset((page - 1) *
@@ -76,7 +94,7 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                 number_of_students).offset(
                 (page - 1) * number_of_students)
             count_students = session.query(Student).filter_by(institute_id=institute_id).count()
-            query2 = session.query(Attendance).filter(Attendance.institute_id == institute_id).all()
+            query2 = session.query(Attendance).filter(Attendance.institute_id == institute_id).order_by(Attendance.date.desc()).all()
         if search_type is not None:
             if search_type == 1 and institute_id is not None:  # search by student name
                 query = session.query(Student).filter(Student.institute_id == institute_id,
@@ -98,12 +116,12 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                         number_of_students).offset((page - 1) * number_of_students)
                     count_students = session.query(Student).filter(Student.institute_id == institute_id).count()
                     query2 = session.query(Attendance).filter(Attendance.date == search1, Attendance.institute_id ==
-                                                              institute_id).all()
+                                                              institute_id).order_by(Attendance.date.desc()).all()
                 elif search2 is None and institute_id is None:
                     query = session.query(Student).order_by(Student.name).limit(
                         number_of_students).offset((page - 1) * number_of_students)
                     count_students = session.query(Student).count()
-                    query2 = session.query(Attendance).filter(Attendance.date == search1).all()
+                    query2 = session.query(Attendance).filter(Attendance.date == search1).order_by(Attendance.date.desc()).all()
                 else:
                     if institute_id is not None:
                         query = session.query(Student).filter(Student.institute_id == institute_id).order_by(
@@ -112,13 +130,13 @@ def students_attendance(number_of_students: int = 100, page: int = 1, institute_
                         count_students = session.query(Student).filter(Student.institute_id == institute_id).count()
                         query2 = session.query(Attendance).filter(and_(Attendance.date >= search1,
                                                                        Attendance.date <= search2),
-                                                                  Attendance.institute_id == institute_id).all()
+                                                                  Attendance.institute_id == institute_id).order_by(Attendance.date.desc()).all()
                     else:
                         query = session.query(Student).order_by(Student.name).limit(
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = session.query(Student).count()
                         query2 = session.query(Attendance).filter(and_(Attendance.date >= search1,
-                                                                       Attendance.date <= search2)).all()
+                                                                       Attendance.date <= search2)).order_by(Attendance.date.desc()).all()
         if search_type == 3:
             attendance = session.query(Student_Attendance).filter(
                 and_(Student_Attendance.time >= search1,

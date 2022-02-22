@@ -1,13 +1,16 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, Date, Boolean, MetaData
-from sqlalchemy.orm import relationship, backref, sessionmaker
+from sqlalchemy.orm import relationship, backref, sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.pool import StaticPool
 
-engine = create_engine('sqlite:///sapi.db',
+engine = create_engine('sqlite:///sapi.db', echo=False, poolclass=StaticPool,
                        connect_args={"check_same_thread": False})
 
 Base = declarative_base()
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = scoped_session(sessionmaker(autocommit=False, 
+        autoflush=True, bind=engine)
+)
 session = SessionLocal()
 
 
