@@ -48,7 +48,6 @@ async def post_attendance(institute_id, date: str):
                 if incrementally_absence > 3:
                     stud = session.query(Student).get(stu.id)
                     stud.banned = 1
-                    Student.update(stud)
 
             session.commit()
         return {
