@@ -1,12 +1,13 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Query, Depends
 from starlette.responses import StreamingResponse
-from models import session, Institute, Student, Student_Installment, Installment, Attendance, Student_Attendance
+from models.db import Institute, Student, StudentInstallment, Installment, Attendance, StudentAttendance
 from typing import Optional
 import qrcode
+from tortoise.query_utils import Q, Prefetch
+from tortoise.transactions import in_transaction
 from PIL import ImageDraw, ImageFont, Image
 import arabic_reshaper
 from bidi.algorithm import get_display
-from sqlalchemy import desc
 import os
 from io import BytesIO
 from fastapi.responses import FileResponse
@@ -57,30 +58,29 @@ def photo_save(photo, _id, name, institute):
 @router.get("/main-admin")
 async def main_admin():
     try:
-        students = session.query(Student)
-        banned = session.query(Student).filter(Student.banned == 1)
-        institutes = session.query(Institute)
-
+        students = await Student.all().count()
+        banned = await Student.filter(banned=1).all().count()
+        institutes_count = await Institute.all().count()
+        institutes = await Institute.all()
+        institutes = [n.__dict__ for n in institutes]
         result = {
             "Response": "OK",
-            "students_count": students.count(),
-            "banned_count": banned.count(),
-            "institutes_count": institutes.count(),
-            "institutes": [institute.format() for institute in institutes.all()]
+            "students_count": students,
+            "banned_count": banned,
+            "institutes_count": institutes_count,
+            "institutes": institutes
 
         }
         for institute in result["institutes"]:
-            student_count = students.join(
-                Institute, Student.institute_id == Institute.id).filter(institute["id"] == Student.institute_id).count()
-            attendance = session.query(Attendance).filter_by(institute_id=institute["id"]).order_by(
-                desc(Attendance.date)).limit(1).all()
-            attendance = [att for att in attendance]
+            student_count = await Student.filter(institute_id=institute['id']).all().count()
+            attendance = await Attendance.filter(institute_id=institute["id"]).order_by('-date').all()
+            # attendance = [att for att in attendance]
 
             institute.update({'students_institute_count': student_count})
             if attendance:
-                attendance = attendance.pop()
-                daily_attendance = session.query(Student_Attendance).filter_by(attendance_id=attendance.id,
-                                                                               attended=1).count()
+                attendance = attendance[-1]
+                daily_attendance = await StudentAttendance.filter(attendance_id=attendance.id,
+                                                                  attended=1).count()
                 institute.update({'daily_attendance': daily_attendance})
             else:
                 institute.update({'daily_attendance': 0})
@@ -92,42 +92,41 @@ async def main_admin():
 
 # To insert Institute
 @router.post("/institute")
-def post_institute(name: str):
+async def post_institute(name: str):
     try:
-        new = Institute(name=name)
-        if 'qr' not in os.listdir("./"):
-            os.makedirs('./qr')
-        if 'images' not in os.listdir("./"):
-            os.makedirs('./images')
-        if name not in os.listdir('./qr'):
-            os.makedirs('./qr/' + name)
-        if name not in os.listdir('./images'):
-            os.makedirs('./images/' + name)
-        Institute.insert(new)
-        return {"success": True}
+        async with in_transaction() as conn:
+            new = Institute(name=name)
+            if 'qr' not in os.listdir("./"):
+                os.makedirs('./qr')
+            if 'images' not in os.listdir("./"):
+                os.makedirs('./images')
+            if name not in os.listdir('./qr'):
+                os.makedirs('./qr/' + name)
+            if name not in os.listdir('./images'):
+                os.makedirs('./images/' + name)
+            await new.save(using_db=conn)
+            return {"success": True}
     except:
         raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # To get Institutes
 @router.get('/institute')
-def get_institute():
+async def get_institute():
     try:
-        query = session.query(Institute).all()
         return {'success': True,
-                "institutes": [inst.format() for inst in query]}
+                "institutes": await Institute.all()}
     except:
         raise StarletteHTTPException(404, "Not Found")
 
 
 # Update institute
 @router.patch('/institute')
-def patch_institute(institute_id: int, name: str):
+async def patch_institute(institute_id: int, name: str):
     try:
-        new = session.query(Institute).get(institute_id)
+        new = await Institute.filter(id=institute_id).first()
         os.rename("./qr/" + new.name, "./qr/" + name)
-        new.name = name
-        Institute.update(new)
+        await Institute.filter(id=institute_id).update(name=name)
         return {"success": True}
     except:
         raise StarletteHTTPException(500, "Internal Server Error")
@@ -143,69 +142,58 @@ def patch_institute(institute_id: int, name: str):
 # To insert Student
 
 @router.post("/student")
-def post_student(name: str = Query("name"),
+async def post_student(name: str = Query("name"),
                  dob: Optional[str] = Query("dob"),
                  institute_id: int = Query("institute_id"),
                  phone: Optional[int] = Query("phone"),
                  note: Optional[str] = Query("note"),
                  photo: bytes = File(None)):
     try:
-        newstudent = Student(name=name, dob=dob, institute_id=institute_id, phone=phone,
-                             note=note)
+        async with in_transaction() as conn:
+            new_student = Student(name=name, dob=dob, institute_id=institute_id, phone=phone,
+                                  note=note)
 
-        Student.insert(newstudent)
-        institute = session.query(Institute).get(institute_id)
+            await new_student.save(using_db=conn)
+            institute_name = await Institute.filter(id=institute_id).first()
+            institute_name = institute_name.name
+            query = await Student.filter(id=new_student.id).first()
 
-        institute_name = institute.name
-
-        query = session.query(Student).get(newstudent.id)
-
-        attendance = session.query(Attendance).filter_by(
-            institute_id=institute_id).order_by(
-            desc(Attendance.date)).limit(1).all()
-        attendance_id = [_id.format()['id'] for _id in attendance]
-        for _id in attendance_id:
-            new = Student_Attendance(
-                student_id=newstudent.id, attendance_id=_id)
-            session.add(new)
-        session.commit()
-
-        if photo is not None:
-            photo = BytesIO(photo)
-            image = photo_save(photo, query.id, query.name,
-                               institute_name)
-            query.photo = image['image_path']
-        qr = qr_gen(query.id, name, institute_name)
-        query.qr = qr['qrpath']
-        Student.update(query)
-        installment = session.query(Installment).filter_by(
-            institute_id=institute_id).all()
-        for _ in installment:
-            new_install = Student_Installment(student_id=query.id, institute_id=institute_id,
-                                              installment_id=_.format()['id'])
-            session.add(new_install)
-        session.commit()
-        return {"success": True}, 200
+            attendance = await Attendance.filter(
+                institute_id=institute_id).order_by(
+                '-date').limit(1).all()
+            attendance_id = [_id.id for _id in attendance]
+            for _id in attendance_id:
+                new = StudentAttendance(
+                    student_id=new_student.id, attendance_id=_id)
+                await new.save(using_db=conn)
+            if photo is not None:
+                photo = BytesIO(photo)
+                image = photo_save(photo, query.id, query.name,
+                                   institute_name)
+                query.photo = image['image_path']
+            qr = qr_gen(query.id, name, institute_name)
+            await Student.filter(id=new_student.id).update(qr=qr['qrpath'])
+            installment = await Installment.filter(
+                institute_id=institute_id).all()
+            for _ in installment:
+                new_install = StudentInstallment(student_id=query.id, institute_id=institute_id,
+                                                 installment_id=_.id)
+                await new_install.save(using_db=conn)
+            return {"success": True}, 200
     except:
         raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # to change student info
 @router.patch('/student')
-def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
+async def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
                   note: Optional[str] = "لا يوجد "):
     try:
-        query = session.query(Student).get(student_id)
-        query.name = name
-        query.dob = dob
-        query.institute_id = institute_id
-        query.note = note
-        query.banned = ban
-        institute = session.query(Institute).filter_by(id=institute_id).all()
-        for record in institute:
-            institute_name = record.format()['name']
+        institute = await Institute.filter(id=institute_id).first()
+        institute_name = institute.name
         new = qr_gen(student_id, name, institute_name)
-        query.qr = new['qrpath']
+        await Student.filter(id=student_id).update(name=name, dob=dob, institute_id=institute_id,
+                                                   note=note, banned=banned, qr=new['qrpath'])
         return {
             'success': True
         }
@@ -215,14 +203,14 @@ def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
 
 # Delete student by ID
 @router.delete('/student')
-def delete_student(student_id: int):
+async def delete_student(student_id: int):
     try:
-        query = session.query(Student).get(student_id)
+        query = await Student.filter(id=student_id).first()
         if query.photo is not None:
             os.remove(query.photo)
         if os.path.exists(query.qr):
             os.remove(query.qr)
-        Student.delete(query)
+        await Student.filter(id=student_id).delete()
         return {
             'success': True
 
@@ -233,11 +221,9 @@ def delete_student(student_id: int):
 
 # To change Qrpath
 @router.patch('/qr')
-def qr(student_id, qr: str):
+async def qr(student_id, qr: str):
     try:
-        query = session.query(Student).get(student_id)
-        query.qr = qr
-        Student.update(query)
+        await Student.filter(id=student_id).update(qr=qr)
         return {
             'success': True
         }
@@ -247,11 +233,9 @@ def qr(student_id, qr: str):
 
 # To change ban state of student
 @router.patch('/banned')
-def banned(student_id: int, ban: int = 0):
+async def banned(student_id: int, ban: int = 0):
     try:
-        stud = session.query(Student).get(student_id)
-        stud.banned = ban
-        Student.update(stud)
+        await Student.filter(id=student_id).update(banned=ban)
         return {
             "success": True
         }
@@ -261,26 +245,22 @@ def banned(student_id: int, ban: int = 0):
 
 # To get students info by institute
 @router.get("/students")
-def student_info(institute_id: int = None, number_of_students: int = 100, page: int = 1, search: str = None):
+async def student_info(institute_id: int = None, number_of_students: int = 100, page: int = 1, search: str = None):
     try:
         if institute_id is not None:
             if search is None:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset(
+                count = await Student.filter(institute_id=institute_id).all().count()
+                student_join = await Student.filter(institute_id=institute_id
+                                                    ).order_by('name').limit(number_of_students).offset(
                     (page - 1) * number_of_students
-                )
+                ).prefetch_related('institute')
             else:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(
-                    Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
+                count = await Student.filter(institute_id=institute_id, name__icontains=search).count()
+                student_join = await Student.filter(institute_id=institute_id, name__icontains=search).order_by(
+                    'name').limit(
+                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute')
 
-
-            students = [stu.format() for stu in student_join]
+            students = student_join
             if count <= number_of_students:
                 pages = 1
             else:
@@ -293,17 +273,17 @@ def student_info(institute_id: int = None, number_of_students: int = 100, page: 
                     }
         else:
             if search is not None:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.name.like('%{}%'.format(search))).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.name.like('%{}%'.format(search))).order_by(
-                    Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
+                count = await Student.filter(name__icontains=search).all().count()
+                student_join = await Student.filter(name__icontains=search).order_by(
+                    'name').limit(
+                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute')
             else:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).order_by(
-                    Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
+                count = await Student.all().count()
+                student_join = await Student.filter().order_by(
+                    'name').limit(
+                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute')
 
-            students = [stu.format() for stu in student_join]
+            students = student_join
             if count <= number_of_students:
                 pages = 1
             else:
@@ -320,26 +300,24 @@ def student_info(institute_id: int = None, number_of_students: int = 100, page: 
 
 
 @router.get("/banned-students")
-def student_info(institute_id: int = None, number_of_students: int = 100, page: int = 1, search: str = None):
+async def student_info(institute_id: int = None, number_of_students: int = 100, page: int = 1, search: str = None):
     try:
         if institute_id is not None:
             if search is None:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id).filter(Student.banned==1).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id, Student.banned==1).order_by(Student.name).limit(number_of_students).offset(
+                count = await Student.filter(institute_id=institute_id, banned=1).all().count()
+                student_join = await Student.filter(institute_id=institute_id, banned=1).order_by('name').limit(
+                    number_of_students).offset(
                     (page - 1) * number_of_students
-                )
+                ).prefetch_related('institute')
             else:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search)), Student.banned==1).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search)), Student.banned==1).order_by(
-                    Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
+                count = await Student.filter(institute_id=institute_id, banned=1, name__icontains=search).all().count()
+                student_join = await Student.filter(institute_id=institute_id, banned=1,
+                                                    name__icontains=search).order_by('name').limit(
+                    number_of_students).offset(
+                    (page - 1) * number_of_students
+                ).prefetch_related('institute')
 
-
-            students = [stu.format() for stu in student_join]
+            students = student_join
             if count <= number_of_students:
                 pages = 1
             else:
@@ -352,17 +330,20 @@ def student_info(institute_id: int = None, number_of_students: int = 100, page: 
                     }
         else:
             if search is not None:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.name.like('%{}%'.format(search))).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.name.like('%{}%'.format(search)), Student.banned==1).order_by(
-                    Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
+                count = await Student.filter(banned=1, name__icontains=search).all().count()
+                student_join = await Student.filter(banned=1,
+                                                    name__icontains=search).order_by('name').limit(
+                    number_of_students).offset(
+                    (page - 1) * number_of_students
+                ).prefetch_related('institute')
             else:
-                count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.banned==1).count()
-                student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(Student.banned==1).order_by(
-                    Student.name).limit(
-                    number_of_students).offset((page - 1) * number_of_students)
+                count = await Student.filter(banned=1).all().count()
+                student_join = await Student.filter(banned=1).order_by('name').limit(
+                    number_of_students).offset(
+                    (page - 1) * number_of_students
+                ).prefetch_related('institute')
 
-            students = [stu.format() for stu in student_join]
+            students = student_join
             if count <= number_of_students:
                 pages = 1
             else:
@@ -377,107 +358,35 @@ def student_info(institute_id: int = None, number_of_students: int = 100, page: 
     except:
         raise StarletteHTTPException(404, "Not Found")
 
-# To get students by institute
-# @router.get("/students-institute")
-# def student_institute(institute_id, number_of_students: int = 100, page: int = 1, search: str = None):
-#     try:
-#         if search is None:
-#             count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-#                 Student.institute_id == institute_id).count()
-#             student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-#                 Student.institute_id == institute_id).order_by(Student.name).limit(number_of_students).offset(
-#                 (page - 1) * number_of_students)
-#
-#             students = [stu.format() for stu in student_join]
-#             if count <= number_of_students:
-#                 pages = 1
-#             else:
-#                 pages = int(round(count / number_of_students))
-#             return {"students": students,
-#                     "total_pages": pages,
-#                     "total_students": count,
-#                     "page": page
-#
-#                     }
-#         else:
-#             count = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-#                 Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).count()
-#             student_join = session.query(Student).join(Institute, Student.institute_id == Institute.id).filter(
-#                 Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).order_by(Student.name
-#                                                                                                          ).limit(
-#                 number_of_students).offset((page - 1) * number_of_students)
-#
-#             students = [stu.format() for stu in student_join]
-#             if count <= number_of_students:
-#                 pages = 1
-#             else:
-#                 pages = int(round(count / number_of_students))
-#             return {"students": students,
-#                     "total_pages": pages,
-#                     "total_students": count,
-#                     "page": page
-#
-#                     }
-#
-#     except:
-#         raise StarletteHTTPException(404, "Not Found")
-
 
 # to get installment of students by student id and install id
 @router.get("/student-installment-bid")
-def install_student(student_id, install_id):
+async def install_student(student_id, install_id):
     try:
-        installstudent = session.query(Student_Installment).join(Student,
-                                                                 Student_Installment.student_id == Student.id).join(
-            Installment, Student_Installment.installment_id == Installment.id)
-        query = installstudent.filter(Student_Installment.student_id ==
-                                      student_id, Student_Installment.installment_id == install_id).all()
-        liststudentinstall = [inst.format() for inst in query]
-        return liststudentinstall
+        install_student = await StudentInstallment.filter(student_id=student_id,
+                                                          installment_id=install_id).all(
+
+        ).prefetch_related('student', 'installment')
+
+        return install_student
     except:
         raise StarletteHTTPException(404, "Not Found")
 
 
-# get students bulky
-# @router.get('/students')
-# def students(number_of_students: int = 100, page: int = 1, search: str = None):
-#     try:
-#         if search is None:
-#             count = session.query(Student).count()
-#             query = session.query(Student).order_by(Student.name).limit(number_of_students).offset(
-#                 (page - 1) * number_of_students)
-#         else:
-#             count = session.query(Student).filter(Student.name.like('%{}%'.format(search))).count()
-#             query = session.query(Student).filter(Student.name.like('%{}%'.format(search))).order_by(
-#                 Student.name).limit(number_of_students).offset((page - 1) * number_of_students)
-#         stu = [record.format() for record in query]
-#         if count <= number_of_students:
-#             pages = 1
-#         else:
-#             pages = int(round(count / number_of_students))
-#         return {"students": stu,
-#                 "total_pages": pages,
-#                 "total_students": count,
-#                 "page": page
-#                 }
-#     except:
-#         raise StarletteHTTPException(404, "Not Found")
-
-
 # get students by id
 @router.get('/student')
-def get_student(student_id: int):
+async def get_student(student_id: int):
     try:
-        return session.query(Student).get(student_id).format()
+        return await Student.filter(id=student_id).first().prefetch_related('institute')
     except:
         raise StarletteHTTPException(404, "Not Found")
 
 
 # To get student image & qr by id
 @router.get('/photo')
-def get_photo(student_id):
+async def get_photo(student_id):
     try:
-        query = session.query(Student).get(student_id)
+        query = await Student.filter(id=student_id).first()
         image_path = query.photo
         img = Image.open(image_path)
         buf = BytesIO()
@@ -492,16 +401,15 @@ def get_photo(student_id):
 # To change student's photo
 
 @router.patch('/photo')
-def patch_photo(student_id: int, photo: bytes = File("photo")):
+async def patch_photo(student_id: int, photo: bytes = File("photo")):
     try:
         photo = BytesIO(photo)
-        stud = session.query(Student).get(student_id)
-        institute = session.query(Institute).get(stud.institute_id)
+        stud = await Student.filter(id=student_id).first()
+        institute = await Institute.filter(id=stud.institute).first()
         if stud.photo is not None:
             os.remove(stud.photo)
         save = photo_save(photo, student_id, stud.name, institute.name)
-        stud.photo = save['image_path']
-        Student.update(stud)
+        await Student.filter(id=student_id).update(photo=save['image_path'])
         return {
             'success': True
         }
@@ -510,11 +418,10 @@ def patch_photo(student_id: int, photo: bytes = File("photo")):
 
 
 @router.get('/qr')
-def get_qr(student_id):
+async def get_qr(student_id):
     try:
-        query = session.query(Student).filter_by(id=student_id).all()
-        stu = [record.format() for record in query]
-        qr_path = stu[0]['qr']
+        query = await Student.filter(id=student_id).first()
+        qr_path = query.qr
         img = Image.open(qr_path)
         buf = BytesIO()
         img.save(buf, 'png')
@@ -529,33 +436,29 @@ def get_qr(student_id):
 
 
 @router.post("/installment")
-def post_installment(name: str, date: str, institute_id: int):
+async def post_installment(name: str, date: str, institute_id: int):
     try:
-        new = Installment(name=name, date=date,
-                          institute_id=institute_id)
-        Installment.insert(new)
-        query = session.query(Student).filter_by(
-            institute_id=institute_id).all()
-        students = [record.students() for record in query]
-        for stu in students:
-            student_instal = Student_Installment(installment_id=new.id, student_id=stu['id'],
-                                                 institute_id=stu['institute_id'])
-            session.add(student_instal)
-        session.commit()
-        return {"success": True}
+        async with in_transaction() as conn:
+            new = Installment(name=name, date=date,
+                              institute_id=institute_id)
+            await new.save(using_db=conn)
+            students = await Student.filter(
+                institute_id=institute_id).all()
+
+            for stu in students:
+                student_instal = StudentInstallment(installment_id=new.id, student_id=stu.id,
+                                                     institute_id=stu.institute)
+                await student_instal.save(using_db=conn)
+            return {"success": True}
     except:
         raise StarletteHTTPException(500, "internal Server Error")
 
 
 # To change installment
 @router.patch('/installment')
-def patch_installment(name: str, institute_id: int, date: str, _id: int):
+async def patch_installment(name: str, institute_id: int, date: str, _id: int):
     try:
-        new = session.query(Installment).get(_id)
-        new.name = name
-        new.date = date
-        new.institute_id = institute_id
-        Installment.update(new)
+        await Installment.filter(id=_id).update(name=name, date=date, institute_id=institute_id)
         return {"success": True}
     except:
         raise StarletteHTTPException(500, "internal Server Error")
@@ -564,11 +467,12 @@ def patch_installment(name: str, institute_id: int, date: str, _id: int):
 # To insert student Installment
 
 @router.post("/student-installment")
-def student_installment(student_id: int, install_id: int, received: int, institute_id):
+async def student_installment(student_id: int, install_id: int, received: int, institute_id):
     try:
-        new = Student_Installment(
-            student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
-        Student_Installment.insert(new)
+        async with in_transaction() as conn:
+            new = StudentInstallment(
+                student_id=student_id, installment_id=install_id, received=received, institute_id=institute_id)
+            await new.save(using_db=conn)
         return {
             "success": True
         }
@@ -578,12 +482,10 @@ def student_installment(student_id: int, install_id: int, received: int, institu
 
 # To change student installment
 @router.patch('/student-installment')
-def patch_student_installment(student_installment_id: int, receive: int
+async def patch_student_installment(student_installment_id: int, receive: int
                               ):
     try:
-        new = session.query(Student_Installment).get(student_installment_id)
-        new.receive = receive
-        Student_Installment.update(new)
+        await StudentInstallment.filter(id=student_installment_id).update(receive=receive)
         return {
             "success": True
         }
@@ -595,71 +497,49 @@ def patch_student_installment(student_installment_id: int, receive: int
 
 
 @router.get("/student-install")
-def student_install(number_of_students: int = 100, page: int = 1, search: str = None, institute_id: int = None):
+async def student_install(number_of_students: int = 100, page: int = 1, search: str = None, institute_id: int = None):
     try:
-        query = session.query(Student).join(Installment,
-                                            Installment.id == Student_Installment.installment_id).join(
-            Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
-                                                                              Student.id ==
-                                                                              Student_Installment.student_id).limit(
+        query = await Student.filter().limit(
             number_of_students).offset(
             (page - 1) * number_of_students)
-        query2 = session.query(Installment).join(
-            Institute, Institute.id == Installment.institute_id)
+        query2 = await Installment.all().prefetch_related('institute')
 
         if institute_id is not None:
-            query = session.query(Student).join(Installment,
-                                                Installment.id == Student_Installment.installment_id).join(
-                Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
-                                                                                  Student.id ==
-                                                                                  Student_Installment.student_id).filter(
-                Student.institute_id == institute_id).limit(
+            query = await Student.filter(institute_id=institute_id).limit(
                 number_of_students).offset(
-                (page - 1) * number_of_students)
-            query2 = session.query(Installment).join(
-                Institute, Institute.id == Installment.institute_id).filter(Installment.institute_id == institute_id)
+                (page - 1) * number_of_students).all()
+            query2 = await Installment.filter(institute_id=institute_id).all().prefetch_related('institute')
             if search is not None:
-                query = session.query(Student).join(Installment,
-                                                    Installment.id == Student_Installment.installment_id).join(
-                    Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
-                                                                                      Student.id ==
-                                                                                      Student_Installment.student_id
-                                                                                      ).filter(
-                    Student.institute_id == institute_id, Student.name.like('%{}%'.format(search))).limit(
+                query = await Student.filter(institute_id=institute_id, name__icontains=search).limit(
                     number_of_students).offset(
-                    (page - 1) * number_of_students)
+                    (page - 1) * number_of_students).all()
 
         if search is not None and institute_id is None:
-            query = session.query(Student).join(Installment,
-                                                Installment.id == Student_Installment.installment_id).join(
-                Institute, Institute.id == Student_Installment.institute_id).join(Student_Installment,
-                                                                                  Student.id ==
-                                                                                  Student_Installment.student_id).filter(
-                Student.name.like('%{}%'.format(search))).limit(
+            query = await Student.filter(name__icontains=search).limit(
                 number_of_students).offset(
-                (page - 1) * number_of_students)
-        count = query.count()
+                (page - 1) * number_of_students).all()
+        count = len(query)
         if count <= number_of_students:
             pages = 1
         else:
             pages = int(round(count / number_of_students))
-        result = {'students': [record.students() for record in query],
-                  "installments": [record.installment() for record in query2.all()],
+        query = [n.__dict__ for n in query]
+        result = {'students': query,
+                  "installments": query2,
                   "page": page,
                   "total_pages": pages,
                   "total_students": count
                   }
 
         for stu in result["students"]:
-            query = session.query(Student_Installment).filter_by(
-                student_id=stu['id']).all()
+            query = await StudentInstallment.filter(student_id=stu['id']).all()
             dicto = {}
             newlist = []
             stu['installment_received'] = {}
-            for record in [record1.received() for record1 in query]:
-                dicto.update({"id": record['id'],
-                              "received": record['received'],
-                              "installment_id": record['installment_id']})
+            for record in query:
+                dicto.update({"id": record.id,
+                              "received": record.receive,
+                              "installment_id": record.installment})
                 newlist.append(dicto)
                 dicto = {}
 
@@ -672,76 +552,39 @@ def student_install(number_of_students: int = 100, page: int = 1, search: str = 
 
 # To get student installments by id student
 @router.get('/student-install-bid')
-def get_student_installment(student_id):
+async def get_student_installment(student_id):
     try:
-        query2 = session.query(Student).filter_by(id=student_id)
-        query = session.query(Installment).filter_by(
-            institute_id=query2.first().institute_id).all()
-        result = {'students': [record.students() for record in query2],
-                  "installments": [record.installment() for record in query]}
-        for stu in result["students"]:
-            query = session.query(Student_Installment).filter_by(
-                student_id=stu['id']).all()
-            dicto = {}
-            newlist = []
-            stu['installment_received'] = {}
-            for record in [record1.received() for record1 in query]:
-                dicto.update({"id": record['id'],
-                              "received": record['received'],
-                              "installment_id": record['installment_id']})
-                newlist.append(dicto)
-                dicto = {}
+        query2 = await Student.filter(id=student_id).first().prefetch_related('institute')
+        query = await Installment.filter(institute_id=query2.institute.id).all().prefetch_related('institute')
+        result = {'students': query2,
+                  "installments": query}
 
-            stu['installment_received'] = newlist
+        query = await StudentInstallment.filter(student_id=query2.id).all()
+        dicto = {}
+        newlist = []
+        stu = query2.__dict__
+
+        stu['installment_received'] = {}
+        for record in query:
+            dicto.update({"id": record.id,
+                          "received": record.receive,
+                          "installment_id": record.installment})
+            newlist.append(dicto)
+            dicto = {}
+
+        stu['installment_received'] = newlist
+        result = {'students': stu,
+                  "installments": query}
         return result
     except:
 
         raise StarletteHTTPException(404, "Not Found")
 
 
-# get students installments by institute id
-# @router.get("/student-install-institute-bid")
-# def student_installments_by_institute_id(institute_id, number_of_students: int = 100, page: int = 1):
-#     try:
-#         count = session.query(Student).filter_by(institute_id=institute_id).count()
-#         query2 = session.query(Student).filter_by(institute_id=institute_id).limit(number_of_students).offset(
-#             (page - 1) * number_of_students)
-#         if count <= number_of_students:
-#             pages = 1
-#         else:
-#             pages = int(round(count / number_of_students))
-#         result = {'students': [record.students() for record in query2]}
-#         for stu in result["students"]:
-#             query = session.query(Student_Installment).filter_by(
-#                 student_id=stu['id']).all()
-#             dicto = {}
-#             newlist = []
-#             stu['installment_received'] = {}
-#             for record in [record1.received() for record1 in query]:
-#                 dicto.update({"id": record['id'],
-#                               "received": record['received'],
-#                               "installment_id": record['installment_id']})
-#                 newlist.append(dicto)
-#                 dicto = {}
-#             stu['installment_received'] = newlist
-#         return {"students": result,
-#                 "total_pages": pages,
-#                 "total_students": count,
-#                 "page": page
-#                 }
-#     except:
-#         raise StarletteHTTPException(404, "Not Found")
-
-
 # To change student installment bulky by installment_id
 @router.patch('/student-install-bid')
-def student_installments_by_install_id(installment_id: int):
-    query = session.query(Student_Installment).filter_by(
-        installment_id=installment_id).all()
-    for record in query:
-        record.receive = 1
-        session.add(record)
-    session.commit()
+async def student_installments_by_install_id(installment_id: int):
+    await StudentInstallment.filter(installment_id=installment_id).update(receive=1)
     return {
         "success": True
     }
@@ -749,11 +592,11 @@ def student_installments_by_install_id(installment_id: int):
 
 # To get institutes
 @router.get('/students-form')
-def students_form():
+async def students_form():
     try:
-        institutes = session.query(Institute).all()
+        institutes = await Institute.all()
         form = {
-            "institutes": [record.format() for record in institutes]
+            "institutes": institutes
         }
         return form
     except:

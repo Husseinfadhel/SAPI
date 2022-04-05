@@ -1,16 +1,14 @@
 import signal
-import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from models import session, engine, Base
-from routers import students, insitute_attendance, users
+# from routers import students, insitute_attendance, users
 from fastapi.responses import PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
-from multiprocessing import Process
 import os
+from tortoise.contrib.fastapi import register_tortoise
 
-Base.metadata.create_all(engine)
+from routers import students, insitute_attendance, users
 
 
 def create_app(test_config=None):
@@ -27,6 +25,13 @@ def create_app(test_config=None):
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    register_tortoise(
+        app,
+        db_url='sqlite://sapi.sqlite3',
+        modules={'models': ["models.db"]},
+        generate_schemas=True,
+        add_exception_handlers=True,
+    )
     app.include_router(students.router)
     app.include_router(insitute_attendance.router)
     app.include_router(users.router)
@@ -38,6 +43,19 @@ def create_app(test_config=None):
     return app
 
 
+TORTOISE_ORM = {
+    "connections": {
+        "default": 'sqlite://sapi.sqlite3'
+    },
+    "apps": {
+        "models": {
+            "models": [
+                "models.db", "aerich.models"
+            ],
+            "default_connection": "default",
+        },
+    },
+}
 app = create_app()
 
 
@@ -56,5 +74,3 @@ def shut():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-

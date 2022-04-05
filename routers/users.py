@@ -1,5 +1,7 @@
 from fastapi import APIRouter
-from models import session, Users
+from tortoise.transactions import in_transaction
+
+from models.db import Users
 from random import randrange
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -8,10 +10,11 @@ router = APIRouter()
 
 # register a new user
 @router.post('/register')
-def register(username: str, password: int, name: str, auth: int):
+async def register(username: str, password: int, name: str, auth: int):
     try:
-        new = Users(username=username, password=password, name=name, auth=auth)
-        Users.insert(new)
+        async with in_transaction() as conn:
+            new = Users(username=username, password=password, name=name, auth=auth)
+            await new.save(using_db=conn)
         return {
             "success": True,
         }
@@ -21,19 +24,18 @@ def register(username: str, password: int, name: str, auth: int):
 
 # login route
 @router.post('/login')
-def login(username: str, password: int):
+async def login(username: str, password: int):
     try:
-        query = session.query(Users).filter_by(username=username).all()
-        record = [user.format() for user in query][0]
-        if record['username'] == username and record['password'] == password:
+        query = await Users.filter(username=username).first()
+        if query.username == username and query.password == password:
             return {
                 "success": True,
                 "token": randrange(999999999, 1000000000000000),
-                "id": record["id"],
-                "name": record['name'],
-                "username": record['username'],
-                "password": record['password'],
-                "auth": record["auth"]
+                "id": query.id,
+                "name": query.name,
+                "username": query.username,
+                "password": query.password,
+                "auth": query.auth
             }
     except:
         raise StarletteHTTPException(401, "Unauthorized")
@@ -41,11 +43,10 @@ def login(username: str, password: int):
 
 # to get users
 @router.get('/users')
-def users():
+async def users():
     try:
-        query = session.query(Users).all()
         return {
-            "users": [record.format() for record in query]
+            "users": await Users.all()
         }
     except:
         raise StarletteHTTPException(404, "Not Found")
@@ -53,14 +54,9 @@ def users():
 
 # to modify user
 @router.patch('/user')
-def user(user_id: int, name: str, username: str, password: int, auth: int):
+async def user(user_id: int, name: str, username: str, password: int, auth: int):
     try:
-        query = session.query(Users).get(user_id)
-        query.name = name
-        query.username = username
-        query.password = password
-        query.auth = auth
-        Users.update(query)
+        await Users.filter(id=user_id).update(name=name, username=username, password=password, auth=auth)
         return {
             "success": True
         }
