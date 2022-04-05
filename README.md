@@ -9,15 +9,14 @@ Hey there 👋,
 
 Student Management System Fastapi
 
-## To using alembic for db migration
+## To using aerich for db migration
 
-be sure to modify env.py file then:
+## To using Aerich for db migration
+ensure to add models in main.TORTOISE_ORM then:
 
-` alembic init alembic`
+` aerich init -t database.TORTOISE_ORM`
 
-` alembic revision --autogenerate -m "first"`
-
-` alembic upgrade head`
+`aerich init-db`
 
 ## To package for installation use this command
 
