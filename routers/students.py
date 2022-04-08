@@ -390,7 +390,12 @@ async def install_student(student_id, install_id):
 @router.get('/student')
 async def get_student(student_id: int):
     try:
-        return await Student.filter(id=student_id).first().prefetch_related('institute')
+        stud = await Student.filter(id=student_id).first().prefetch_related('institute')
+        stud = stud.__dict__
+        stud['institute'] = stud['_institute']
+        del stud['_institute']
+        del stud['institute_id']
+        return stud
     except:
         raise StarletteHTTPException(404, "Not Found")
 

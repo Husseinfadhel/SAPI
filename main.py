@@ -27,7 +27,7 @@ def create_app(test_config=None):
     )
     register_tortoise(
         app,
-        db_url='sqlite://sapi.sqlite3',
+        db_url='sqlite://sapi.db',
         modules={'models': ["models.db"]},
         generate_schemas=True,
         add_exception_handlers=True,
@@ -45,7 +45,7 @@ def create_app(test_config=None):
 
 TORTOISE_ORM = {
     "connections": {
-        "default": 'sqlite://sapi.sqlite3'
+        "default": 'sqlite://sapi.db'
     },
     "apps": {
         "models": {

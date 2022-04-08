@@ -213,6 +213,143 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         raise StarletteHTTPException(404, "Not Found")
 
 
+# get student attendance bulky with pagination
+@router.get('/banned-students-attendance')
+async def students_attendance(number_of_students: int = 100, page: int = 1, institute_id: int = None,
+                              search_type: int = None, search1: str = None, search2: str = None):
+    global atten_student
+    try:
+        n = 0
+        query = None
+        query2 = await Attendance.filter().order_by('-date').all()
+        count_students = await Student.filter(banned=1).all().count()
+        if institute_id is None:
+            query = await Student.filter(banned=1).order_by('name').limit(number_of_students).offset((page - 1) *
+                                                                                                number_of_students)
+        elif institute_id is not None:
+            query = await Student.filter(institute_id=institute_id, banned=1).order_by('name').limit(
+                number_of_students).offset(
+                (page - 1) * number_of_students)
+            count_students = await Student.filter(institute_id=institute_id, banned=1).count()
+            query2 = await Attendance.filter(institute_id=institute_id).order_by(
+                '-date').all()
+        if search_type is not None:
+            if search_type == 1 and institute_id is not None:  # search by student name
+                query = await Student.filter(institute_id=institute_id,
+                                                name__icontains=search1, banned=1).order_by('name'
+                                                                                ).limit(
+                    number_of_students).offset((page - 1) * number_of_students)
+                count_students = await Student.filter(institute_id=institute_id,
+                                                        name__icontains=search1, banned=1).count()
+            elif search_type == 1 and institute_id is None:
+                query = await Student.filter(
+                    name__icontains=search1, banned=1).order_by('name').limit(
+                    number_of_students).offset((page - 1) * number_of_students)
+                count_students = await Student.filter(
+                    name__icontains=search1, banned=1).count()
+            elif search_type == 2:  # search by two date or one
+                if search2 is None and institute_id is not None:
+                    query = await Student.filter(institute_id=institute_id, banned=1).order_by(
+                        'name').limit(
+                        number_of_students).offset((page - 1) * number_of_students)
+                    count_students = await Student.filter(institute_id=institute_id, banned=1).count()
+                    query2 = await Attendance.filter(date=search1, institute_id=institute_id).order_by('-date').all()
+                elif search2 is None and institute_id is None:
+                    query = await Student.filter(banned=1).order_by('name').limit(
+                        number_of_students).offset((page - 1) * number_of_students)
+                    count_students = await Student.filter(banned=1).all().count()
+                    query2 = await Attendance.filter(date=search1).order_by('-date').all()
+                else:
+                    if institute_id is not None:
+                        query = await Student.filter(institute_id=institute_id, banned=1).order_by(
+                            'name').limit(
+                            number_of_students).offset((page - 1) * number_of_students)
+                        count_students = await Student.filter(institute_id=institute_id, banned=1).count()
+                        query2 = await Attendance.filter(Q(date__gte=search1) &
+                                                            Q(date__lte=search2),
+                                                            institute_id=institute_id).order_by(
+                            '-date').all()
+                    else:
+                        query = await Student.filter(banned=1).order_by('name').limit(
+                            number_of_students).offset((page - 1) * number_of_students)
+                        count_students = await Student.filter(banned=1).all().count()
+                        query2 = await Attendance.filter(Q(date__gte=search1) &
+                                                            Q(date__lte=search2)).order_by(
+                            '-date').all()
+        if search_type == 3:
+            attendance = await StudentAttendance.filter(
+                Q(time__gte=search1) &
+                Q(time__lte=search2)).all()
+
+            bulk_attend = attendance
+            atten_student = set([stude.student for stude in bulk_attend])
+            atten_student = list(atten_student)
+            n = 1
+            query = []
+            if len(atten_student) <= 100:
+                for cou in atten_student:
+                    min_query = await Student.filter(id=cou).all()
+                    query.extend(min_query)
+            elif len(atten_student) > 100:
+                start = (page - 1) * number_of_students
+                attended = atten_student[start:start + number_of_students]
+                for cou in attended:
+                    min_query = await Student.filter(id=cou).all()
+                    query.extend(min_query)
+        if n == 1:
+            students = query
+            count_students = len(atten_student)
+            if count_students <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count_students / number_of_students))
+        else:
+            students = query
+            if count_students <= number_of_students:
+                pages = 1
+            else:
+                pages = int(round(count_students / number_of_students))
+        students = [n.__dict__ for n in students]
+        new_attend = {}
+        enlist = []
+        for stu in students:
+            if search_type != 3:
+                print(stu['id'])
+                attendance = await StudentAttendance.filter(
+                    student_id=stu['id']).all().prefetch_related('attendance')
+                for attend in attendance:
+                    new_attend['student_attendance_id'] = attend.id
+                    new_attend['attended'] = attend.attended
+                    new_attend['attendance_id'] = attend.attendance.id
+                    new_attend['time'] = attend.time
+                    enlist.append(new_attend)
+                    new_attend = {}
+                stu.update({"student_attendance": enlist})
+                enlist = []
+            elif search_type == 3:
+                attendance = await StudentAttendance.filter(
+                    Q(time__gte=search1) &
+                    Q(time__lte=search2), student_id=stu['id']).all().prefetch_related('attendance')
+                for attend in attendance:
+                    new_attend['student_attendance_id'] = attend.id
+                    new_attend['attended'] = attend.attended
+                    new_attend['attendance_id'] = attend.attendance.id
+                    new_attend['time'] = attend.time
+                    enlist.append(new_attend)
+                    new_attend = {}
+                stu.update({"student_attendance": enlist})
+                enlist = []
+
+        return {
+            "students": students,
+            "attendance": query2,
+            "total_pages": pages,
+            "total_students": count_students,
+            "page": page
+        }
+    except:
+        raise StarletteHTTPException(404, "Not Found")
+
 # To change Student Attendance
 @router.patch('/students-attendance')
 async def patch_students_attendance(student_attendance_id: int, attended: int):
@@ -236,8 +373,11 @@ async def patch_students_attendance(student_attendance_id: int, attended: int):
 @router.get('/attendance-start')
 async def attendance_start(student_id):
     # try:
-    student = await Student.filter(id=student_id).first()
+    student = await Student.filter(id=student_id).first().prefetch_related('institute')
     student = student.__dict__
+    student['institute'] = student['_institute']
+    del student['_institute']
+    del student['institute_id']
     total_absence = await StudentAttendance.filter(
         student_id=student_id, attended=0).all().count() - 1
 
