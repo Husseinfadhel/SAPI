@@ -59,6 +59,7 @@ def photo_save(photo, _id, name, institute):
 async def main_admin():
     try:
         students = await Student.all().count()
+        unbanned = await Student.filter(banned=0).all().count()
         banned = await Student.filter(banned=1).all().count()
         institutes_count = await Institute.all().count()
         institutes = await Institute.all()
@@ -66,6 +67,7 @@ async def main_admin():
         result = {
             "Response": "OK",
             "students_count": students,
+            "unbanned_count": unbanned,
             "banned_count": banned,
             "institutes_count": institutes_count,
             "institutes": institutes
