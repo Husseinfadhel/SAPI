@@ -253,19 +253,25 @@ async def student_info(institute_id: int = None, number_of_students: int = 100, 
                 student_join = await Student.filter(institute_id=institute_id
                                                     ).order_by('name').limit(number_of_students).offset(
                     (page - 1) * number_of_students
-                ).prefetch_related('institute')
+                ).prefetch_related('institute').all()
             else:
                 count = await Student.filter(institute_id=institute_id, name__icontains=search).count()
                 student_join = await Student.filter(institute_id=institute_id, name__icontains=search).order_by(
                     'name').limit(
-                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute')
+                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute').all()
 
-            students = student_join
+            all_data = []
+            for d in student_join:
+                d = d.__dict__
+                d['institute'] = d['_institute']
+                del d['_institute']
+                del d['institute_id']
+                all_data.append(d)
             if count <= number_of_students:
                 pages = 1
             else:
                 pages = int(round(count / number_of_students))
-            return {"students": students,
+            return {"students": all_data,
                     "total_pages": pages,
                     "total_students": count,
                     "page": page
@@ -276,19 +282,26 @@ async def student_info(institute_id: int = None, number_of_students: int = 100, 
                 count = await Student.filter(name__icontains=search).all().count()
                 student_join = await Student.filter(name__icontains=search).order_by(
                     'name').limit(
-                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute')
+                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute').all()
             else:
                 count = await Student.all().count()
                 student_join = await Student.filter().order_by(
                     'name').limit(
-                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute')
+                    number_of_students).offset((page - 1) * number_of_students).prefetch_related('institute').all()
 
-            students = student_join
+            all_data = []
+            for d in student_join:
+                d = d.__dict__
+                d['institute'] = d['_institute']
+                del d['_institute']
+                del d['institute_id']
+                all_data.append(d)
+
             if count <= number_of_students:
                 pages = 1
             else:
                 pages = int(round(count / number_of_students))
-            return {"students": students,
+            return {"students": student_join,
                     "total_pages": pages,
                     "total_students": count,
                     "page": page
