@@ -74,7 +74,7 @@ async def main_admin():
 
         }
         for institute in result["institutes"]:
-            student_count = await Student.filter(institute_id=institute['id']).all().count()
+            student_count = await Student.filter(institute_id=institute['id'], banned=0).all().count()
             attendance = await Attendance.filter(institute_id=institute["id"]).order_by('-date').all()
             # attendance = [att for att in attendance]
 
