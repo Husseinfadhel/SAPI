@@ -176,7 +176,6 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         enlist = []
         for stu in students:
             if search_type != 3:
-                print(stu['id'])
                 attendance = await StudentAttendance.filter(
                     student_id=stu['id']).all().prefetch_related('attendance')
                 for attend in attendance:
@@ -386,9 +385,9 @@ async def attendance_start(student_id):
 
     student_attendance_id = await StudentAttendance.filter(
         student_id=student_id).prefetch_related(Prefetch('attendance',
-                                                         queryset=Attendance.all().order_by('-date'))).first()
-
-    if student_attendance_id.attendance == 1:
+                                                         queryset=Attendance.all().order_by('-date'))).order_by('-id').first()
+                                                         
+    if student_attendance_id.attended == 1:
         raise StarletteHTTPException(401, "Unauthorized")
 
     student.update(

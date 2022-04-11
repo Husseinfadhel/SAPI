@@ -75,7 +75,7 @@ async def main_admin():
         }
         for institute in result["institutes"]:
             student_count = await Student.filter(institute_id=institute['id'], banned=0).all().count()
-            attendance = await Attendance.filter(institute_id=institute["id"]).order_by('-date').all()
+            attendance = await Attendance.filter(institute_id=institute["id"]).order_by('date').all()
             # attendance = [att for att in attendance]
 
             institute.update({'students_institute_count': student_count})
@@ -153,7 +153,7 @@ async def post_student(name: str = Query("name"),
     try:
         async with in_transaction() as conn:
             new_student = Student(name=name, dob=dob, institute_id=institute_id, phone=phone,
-                                  note=note)
+                                    note=note)
 
             await new_student.save(using_db=conn)
             institute_name = await Institute.filter(id=institute_id).first()
@@ -171,7 +171,7 @@ async def post_student(name: str = Query("name"),
             if photo is not None:
                 photo = BytesIO(photo)
                 image = photo_save(photo, query.id, query.name,
-                                   institute_name)
+                                    institute_name)
                 query.photo = image['image_path']
             qr = qr_gen(query.id, name, institute_name)
             await Student.filter(id=new_student.id).update(qr=qr['qrpath'])
@@ -179,7 +179,7 @@ async def post_student(name: str = Query("name"),
                 institute_id=institute_id).all()
             for _ in installment:
                 new_install = StudentInstallment(student_id=query.id, institute_id=institute_id,
-                                                 installment_id=_.id)
+                                                    installment_id=_.id)
                 await new_install.save(using_db=conn)
             return {"success": True}, 200
     except:
@@ -190,17 +190,17 @@ async def post_student(name: str = Query("name"),
 @router.patch('/student')
 async def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
                   note: Optional[str] = "لا يوجد "):
-    try:
-        institute = await Institute.filter(id=institute_id).first()
-        institute_name = institute.name
-        new = qr_gen(student_id, name, institute_name)
-        await Student.filter(id=student_id).update(name=name, dob=dob, institute_id=institute_id,
-                                                   note=note, banned=banned, qr=new['qrpath'])
-        return {
-            'success': True
-        }
-    except:
-        raise StarletteHTTPException(500, "Internal Server Error")
+    # try:
+    institute = await Institute.filter(id=institute_id).first()
+    institute_name = institute.name
+    new = qr_gen(student_id, name, institute_name)
+    await Student.filter(id=student_id).update(name=name, dob=dob, institute_id=institute_id,
+                                                note=note, banned=ban, qr=new['qrpath'])
+    return {
+        'success': True
+    }
+    # except:
+    #     raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # Delete student by ID

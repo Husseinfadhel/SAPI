@@ -18,7 +18,7 @@ class Student(Model):
     name = fields.TextField(null=True)
     dob = fields.TextField(null=True)
     phone = fields.IntField(null=True)
-    qr = fields.CharField(max_length=100, unique=True)
+    qr = fields.CharField(max_length=100, unique=True, null=True)
     note = fields.TextField(null=True)
     photo = fields.TextField(null=True)
     banned = fields.IntField(default=0)
