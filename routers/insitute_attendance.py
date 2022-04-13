@@ -87,7 +87,7 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         count_students = await Student.all().count()
         if institute_id is None:
             query = await Student.filter().order_by('name').limit(number_of_students).offset((page - 1) *
-                                                                                            number_of_students)
+                                                                                             number_of_students)
         elif institute_id is not None:
             query = await Student.filter(institute_id=institute_id).order_by('name').limit(
                 number_of_students).offset(
@@ -98,11 +98,11 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         if search_type is not None:
             if search_type == 1 and institute_id is not None:  # search by student name
                 query = await Student.filter(institute_id=institute_id,
-                                            name__icontains=search1).order_by('name'
-                                                                            ).limit(
+                                             name__icontains=search1).order_by('name'
+                                                                               ).limit(
                     number_of_students).offset((page - 1) * number_of_students)
                 count_students = await Student.filter(institute_id=institute_id,
-                                                    name__icontains=search1).count()
+                                                      name__icontains=search1).count()
             elif search_type == 1 and institute_id is None:
                 query = await Student.filter(
                     name__icontains=search1).order_by('name').limit(
@@ -128,15 +128,15 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = await Student.filter(institute_id=institute_id).count()
                         query2 = await Attendance.filter(Q(date__gte=search1) &
-                                                        Q(date__lte=search2),
-                                                        institute_id=institute_id).order_by(
+                                                         Q(date__lte=search2),
+                                                         institute_id=institute_id).order_by(
                             '-date').all()
                     else:
                         query = await Student.filter().order_by('name').limit(
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = await Student.all().count()
                         query2 = await Attendance.filter(Q(date__gte=search1) &
-                                                        Q(date__lte=search2)).order_by(
+                                                         Q(date__lte=search2)).order_by(
                             '-date').all()
         if search_type == 3:
             attendance = await StudentAttendance.filter(
@@ -224,7 +224,7 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         count_students = await Student.filter(banned=1).all().count()
         if institute_id is None:
             query = await Student.filter(banned=1).order_by('name').limit(number_of_students).offset((page - 1) *
-                                                                                            number_of_students)
+                                                                                                     number_of_students)
         elif institute_id is not None:
             query = await Student.filter(institute_id=institute_id, banned=1).order_by('name').limit(
                 number_of_students).offset(
@@ -235,11 +235,11 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         if search_type is not None:
             if search_type == 1 and institute_id is not None:  # search by student name
                 query = await Student.filter(institute_id=institute_id,
-                                            name__icontains=search1, banned=1).order_by('name'
-                                                                            ).limit(
+                                             name__icontains=search1, banned=1).order_by('name'
+                                                                                         ).limit(
                     number_of_students).offset((page - 1) * number_of_students)
                 count_students = await Student.filter(institute_id=institute_id,
-                                                    name__icontains=search1, banned=1).count()
+                                                      name__icontains=search1, banned=1).count()
             elif search_type == 1 and institute_id is None:
                 query = await Student.filter(
                     name__icontains=search1, banned=1).order_by('name').limit(
@@ -265,15 +265,15 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = await Student.filter(institute_id=institute_id, banned=1).count()
                         query2 = await Attendance.filter(Q(date__gte=search1) &
-                                                        Q(date__lte=search2),
-                                                        institute_id=institute_id).order_by(
+                                                         Q(date__lte=search2),
+                                                         institute_id=institute_id).order_by(
                             '-date').all()
                     else:
                         query = await Student.filter(banned=1).order_by('name').limit(
                             number_of_students).offset((page - 1) * number_of_students)
                         count_students = await Student.filter(banned=1).all().count()
                         query2 = await Attendance.filter(Q(date__gte=search1) &
-                                                        Q(date__lte=search2)).order_by(
+                                                         Q(date__lte=search2)).order_by(
                             '-date').all()
         if search_type == 3:
             attendance = await StudentAttendance.filter(
@@ -349,6 +349,8 @@ async def students_attendance(number_of_students: int = 100, page: int = 1, inst
         raise StarletteHTTPException(404, "Not Found")
 
 # To change Student Attendance
+
+
 @router.patch('/students-attendance')
 async def patch_students_attendance(student_attendance_id: int, attended: int):
     try:
@@ -384,9 +386,8 @@ async def attendance_start(student_id):
                                                          queryset=Attendance.all().order_by('-date'))).all()
 
     student_attendance_id = await StudentAttendance.filter(
-        student_id=student_id).prefetch_related(Prefetch('attendance',
-                                                         queryset=Attendance.all().order_by('-date'))).order_by('-id').first()
-                                                         
+        student_id=student_id).select_related('attendance').order_by('-attendance__date').first()
+
     if student_attendance_id.attended == 1:
         raise StarletteHTTPException(401, "Unauthorized")
 
@@ -403,8 +404,7 @@ async def attendance_start(student_id):
         elif record['attended'] == 1:
             incrementally_absence = 0
 
-    attendance_date = await Attendance.filter(id=
-                                              student_attendance_id.attendance.id).first()
+    attendance_date = await Attendance.filter(id=student_attendance_id.attendance.id).first()
 
     installments = await StudentInstallment.filter(student_id=student_id
                                                    ).prefetch_related(

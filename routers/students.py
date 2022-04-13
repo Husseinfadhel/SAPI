@@ -145,15 +145,15 @@ async def patch_institute(institute_id: int, name: str):
 
 @router.post("/student")
 async def post_student(name: str = Query("name"),
-                 dob: Optional[str] = Query("dob"),
-                 institute_id: int = Query("institute_id"),
-                 phone: Optional[int] = Query("phone"),
-                 note: Optional[str] = Query("note"),
-                 photo: bytes = File(None)):
+                       dob: Optional[str] = Query("dob"),
+                       institute_id: int = Query("institute_id"),
+                       phone: Optional[int] = Query("phone"),
+                       note: Optional[str] = Query("note"),
+                       photo: bytes = File(None)):
     try:
         async with in_transaction() as conn:
             new_student = Student(name=name, dob=dob, institute_id=institute_id, phone=phone,
-                                    note=note)
+                                  note=note)
 
             await new_student.save(using_db=conn)
             institute_name = await Institute.filter(id=institute_id).first()
@@ -171,7 +171,7 @@ async def post_student(name: str = Query("name"),
             if photo is not None:
                 photo = BytesIO(photo)
                 image = photo_save(photo, query.id, query.name,
-                                    institute_name)
+                                   institute_name)
                 query.photo = image['image_path']
             qr = qr_gen(query.id, name, institute_name)
             await Student.filter(id=new_student.id).update(qr=qr['qrpath'])
@@ -179,7 +179,7 @@ async def post_student(name: str = Query("name"),
                 institute_id=institute_id).all()
             for _ in installment:
                 new_install = StudentInstallment(student_id=query.id, institute_id=institute_id,
-                                                    installment_id=_.id)
+                                                 installment_id=_.id)
                 await new_install.save(using_db=conn)
             return {"success": True}, 200
     except:
@@ -189,18 +189,18 @@ async def post_student(name: str = Query("name"),
 # to change student info
 @router.patch('/student')
 async def patch_student(student_id, name: str, dob, institute_id, ban: int = 0,
-                  note: Optional[str] = "لا يوجد "):
-    # try:
-    institute = await Institute.filter(id=institute_id).first()
-    institute_name = institute.name
-    new = qr_gen(student_id, name, institute_name)
-    await Student.filter(id=student_id).update(name=name, dob=dob, institute_id=institute_id,
-                                                note=note, banned=ban, qr=new['qrpath'])
-    return {
-        'success': True
-    }
-    # except:
-    #     raise StarletteHTTPException(500, "Internal Server Error")
+                        note: Optional[str] = "لا يوجد "):
+    try:
+        institute = await Institute.filter(id=institute_id).first()
+        institute_name = institute.name
+        new = qr_gen(student_id, name, institute_name)
+        await Student.filter(id=student_id).update(name=name, dob=dob, institute_id=institute_id,
+                                                   note=note, banned=ban, qr=new['qrpath'])
+        return {
+            'success': True
+        }
+    except:
+        raise StarletteHTTPException(500, "Internal Server Error")
 
 
 # Delete student by ID
@@ -215,7 +215,6 @@ async def delete_student(student_id: int):
         await Student.filter(id=student_id).delete()
         return {
             'success': True
-
         }
     except:
         raise StarletteHTTPException(500, "Internal Server Error")
@@ -467,7 +466,7 @@ async def post_installment(name: str, date: str, institute_id: int):
 
             for stu in students:
                 student_instal = StudentInstallment(installment_id=new.id, student_id=stu.id,
-                                                     institute_id=stu.institute)
+                                                    institute_id=stu.institute)
                 await student_instal.save(using_db=conn)
             return {"success": True}
     except:
@@ -503,7 +502,7 @@ async def student_installment(student_id: int, install_id: int, received: int, i
 # To change student installment
 @router.patch('/student-installment')
 async def patch_student_installment(student_installment_id: int, receive: int
-                              ):
+                                    ):
     try:
         await StudentInstallment.filter(id=student_installment_id).update(receive=receive)
         return {
